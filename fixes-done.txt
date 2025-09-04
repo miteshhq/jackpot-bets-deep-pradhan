@@ -1,0 +1,2 @@
+- fixed the green boxes on bet placing
+- fixed the times 13:00 14:00 etc
