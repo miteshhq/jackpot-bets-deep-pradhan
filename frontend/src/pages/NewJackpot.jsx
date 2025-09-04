@@ -6,21 +6,26 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import io from "socket.io-client";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom"; // ADD THIS IMPORT
+import { useNavigate } from "react-router-dom";
 
 const ShufflingNumber = ({ preview, isFinal }) => {
   const [display, setDisplay] = React.useState("--");
 
   useEffect(() => {
+    console.log("🎰 ShufflingNumber: isFinal =", isFinal, "preview =", preview);
+
     if (!isFinal) {
-      // Fast random shuffle
       const interval = setInterval(() => {
         const randomNum = Math.floor(Math.random() * 100);
         setDisplay(randomNum.toString().padStart(2, "0"));
-      }, 80); // speed
-      return () => clearInterval(interval);
+      }, 80);
+
+      return () => {
+        console.log("🛑 Clearing shuffling interval");
+        clearInterval(interval);
+      };
     } else {
-      // Final result show
+      console.log("✅ Displaying final number:", preview);
       setDisplay(preview?.toString().padStart(2, "0") || "--");
     }
   }, [preview, isFinal]);
@@ -38,6 +43,32 @@ const ShufflingNumber = ({ preview, isFinal }) => {
     >
       {display}
     </motion.div>
+  );
+};
+
+// Simple Confirmation Message Component
+const ConfirmationMessage = ({ message, type, onClose }) => {
+  if (!message) return null;
+
+  const bgColor =
+    type === "success"
+      ? "bg-green-600"
+      : type === "error"
+      ? "bg-red-600"
+      : "bg-blue-600";
+
+  return (
+    <div
+      className={`fixed bottom-10 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center animate-bounce`}
+    >
+      <span className="mr-3">{message}</span>
+      <button
+        onClick={onClose}
+        className="text-white hover:text-gray-200 font-bold text-xl leading-none focus:outline-none"
+      >
+        ×
+      </button>
+    </div>
   );
 };
 
@@ -79,7 +110,7 @@ const generateBarcode = () => {
 };
 
 const JackpotGame = () => {
-  const navigate = useNavigate(); // ADD THIS LINE
+  const navigate = useNavigate();
   const [betNumbers, setBetNumbers] = useState(new Set());
 
   const [finalPopupCountdown, setFinalPopupCountdown] = useState(null);
@@ -102,6 +133,10 @@ const JackpotGame = () => {
   const [lpValue, setLpValue] = useState("5");
   const [currentDrawTime, setCurrentDrawTime] = useState(getCurrentRoundTime());
 
+  // New state for confirmation messages
+  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
+
   const token = localStorage.getItem("token");
   const user = token ? jwtDecode(token) : null;
   const socketRef = useRef(null);
@@ -111,12 +146,34 @@ const JackpotGame = () => {
     numbers.slice(row * 10, row * 10 + 10)
   );
 
+  // Show confirmation message helper
+  const showMessage = (message, type = "success", duration = 5000) => {
+    setConfirmationMessage(message);
+    setMessageType(type);
+    setTimeout(() => {
+      setConfirmationMessage("");
+    }, duration);
+  };
+
+  // Clear function for manual clearing
   const clearNumber = () => {
+    console.log("🧹 Manual clearing all betting fields...");
     setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
     setEValues(Array(10).fill(""));
     setRowValues(Array(10).fill(""));
     setBetNumbers(new Set());
+    setLpValue("5");
     localStorage.removeItem("placedNumbers");
+    showMessage("🧹 All fields cleared! Ready for new bets.", "info");
+  };
+
+  // Auto clear function after successful bet placement
+  const autoClearAfterBet = () => {
+    console.log("🔄 Auto-clearing after successful bet placement...");
+    setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
+    setEValues(Array(10).fill(""));
+    setRowValues(Array(10).fill(""));
+    setLpValue("5");
   };
 
   // BARCODE functionality
@@ -174,20 +231,32 @@ const JackpotGame = () => {
       console.log("📩 final-popup received:", { countdown, preview, isResult });
 
       if (countdown === null) {
+        console.log("🔄 New round starting - resetting popup");
         setFinalPopupCountdown(null);
         setFinalPopupPreview(null);
         setBetNumbers(new Set());
         localStorage.removeItem("placedNumbers");
       } else if (isResult && countdown === 0) {
+        console.log("🛑 Final result received, stopping shuffle");
         setFinalPopupCountdown(0);
         setFinalPopupPreview(preview);
+
+        setTimeout(() => {
+          console.log("⏰ Auto-closing final result popup");
+          setFinalPopupCountdown(null);
+          setFinalPopupPreview(null);
+        }, 4000);
       } else if (countdown > 0) {
+        console.log("⏳ Countdown in progress:", countdown);
         setFinalPopupCountdown(countdown);
         setFinalPopupPreview(preview);
       }
     });
 
-    return () => socketRef.current.disconnect();
+    return () => {
+      console.log("🔌 Disconnecting socket");
+      socketRef.current.disconnect();
+    };
   }, [user]);
 
   // LOAD SAVED BETS
@@ -203,11 +272,17 @@ const JackpotGame = () => {
     }
   }, [currentDrawTime]);
 
-  // UPDATED PLACE BET - WITH AUTO PRINT
+  // ENHANCED PLACE BET WITH AUTO CLEAR AND CONFIRMATION MESSAGE
   const handlePlaceBet = async () => {
-    if (!user) return alert("❌ Please login first.");
-    if (timeLeft <= 15)
-      return alert("⚠️ Bet window closed. Please wait for next round.");
+    if (!user) {
+      showMessage("❌ Please login first.", "error");
+      return;
+    }
+
+    if (timeLeft <= 15) {
+      showMessage("⚠️ Bet window closed. Please wait for next round.", "error");
+      return;
+    }
 
     const bets = [];
     const placedNumbers = new Set();
@@ -217,14 +292,16 @@ const JackpotGame = () => {
         const amount = parseFloat(value);
         if (!isNaN(amount) && amount > 0) {
           const number = rowIndex * 10 + colIndex;
-          bets.push({ number, points: amount }); // Changed 'stake' to 'points' for PrintF12 compatibility
+          bets.push({ number, points: amount });
           placedNumbers.add(number);
         }
       });
     });
 
-    if (bets.length === 0)
-      return alert("⚠️ Please enter at least one number to place bet.");
+    if (bets.length === 0) {
+      showMessage("⚠️ Please enter at least one number to place bet.", "error");
+      return;
+    }
 
     try {
       const roundTime = getCurrentRoundTime();
@@ -238,6 +315,7 @@ const JackpotGame = () => {
       const newBarcode = generateBarcode();
       setBarcode(newBarcode);
 
+      // Place all bets
       for (const bet of bets) {
         await axios.post(`${BACKEND_URL}/api/bets/place`, {
           userId: user.id,
@@ -248,7 +326,7 @@ const JackpotGame = () => {
         });
       }
 
-      // Save in state + localStorage
+      // Save placed bet numbers for reference
       setBetNumbers((prev) => {
         const updated = new Set([...prev, ...placedNumbers]);
         localStorage.setItem(
@@ -258,21 +336,33 @@ const JackpotGame = () => {
         return updated;
       });
 
-      alert(`✅ Bet placed successfully!\n🧾 Barcode: ${newBarcode}`);
-      setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
+      // Show success message
+      showMessage(
+        `✅ Bet placed successfully! Barcode: ${newBarcode}. You can place new bets now.`,
+        "success",
+        7000
+      );
 
-      // 🔥 AUTO PRINT: Navigate to print page with bet details
+      // Auto clear input fields after successful bet
+      setTimeout(() => {
+        autoClearAfterBet();
+      }, 1000);
+
+      // Navigate to print page
       navigate("/print-f12", {
         state: {
           selectedBets: bets,
           barcode: newBarcode,
           roundTime,
-          autoPrint: true, // Flag to indicate automatic print
+          autoPrint: true,
         },
       });
     } catch (err) {
       console.error("❌ Bet error:", err.response?.data || err.message);
-      alert("❌ Failed to place bet. Please check your balance or try again.");
+      showMessage(
+        "❌ Failed to place bet. Please check your balance or try again.",
+        "error"
+      );
     }
   };
 
@@ -280,7 +370,7 @@ const JackpotGame = () => {
   const handleLPClick = () => {
     const count = parseInt(lpValue);
     if (isNaN(count) || count <= 0 || count > 5) {
-      alert("⚠️ Please enter a valid number between 1 and 5.");
+      showMessage("⚠️ Please enter a valid number between 1 and 5.", "error");
       return;
     }
 
@@ -297,6 +387,11 @@ const JackpotGame = () => {
 
     setGridValues(updatedGrid);
     setLpValue("5");
+    showMessage(
+      `🎲 Lucky Pick: ${count} random numbers selected!`,
+      "info",
+      3000
+    );
   };
 
   return (
@@ -320,7 +415,7 @@ const JackpotGame = () => {
               <div className="w-full bg-gradient-to-b from-white via-blue-100 to-blue-500 p-2 rounded-md relative">
                 {/* Main Content */}
                 <div className="flex w-full">
-                  {/* Main Grid */}
+                  {/* Main Grid - NO GREEN BOXES */}
                   <div className="w-full sm:w-[85%] space-y-[8px] pt-[2px]">
                     {grid.map((row, rowIndex) => (
                       <div
@@ -339,9 +434,7 @@ const JackpotGame = () => {
                               className={`text-center border border-gray-400 h-[20px] w-[26px] text-[8px]
                 sm:h-[28px] sm:w-12 sm:text-xs disabled:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500
                 ${
-                  betNumbers?.has(num)
-                    ? "bg-white"
-                    : parseFloat(gridValues[rowIndex][colIndex]) > 0
+                  parseFloat(gridValues[rowIndex][colIndex]) > 0
                     ? "bg-yellow-300"
                     : "bg-white"
                 }`}
@@ -579,7 +672,7 @@ const JackpotGame = () => {
 
             {/* Final Popup */}
             {finalPopupCountdown !== null && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm">
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -592,6 +685,33 @@ const JackpotGame = () => {
                     preview={finalPopupPreview}
                     isFinal={finalPopupCountdown === 0}
                   />
+
+                  {finalPopupCountdown > 0 && (
+                    <div className="absolute bottom-2 right-2 bg-white w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] rounded-full flex items-center justify-center shadow-md">
+                      <span className="text-black text-2xl sm:text-3xl font-bold">
+                        {finalPopupCountdown.toString().padStart(2, "0")}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="absolute top-2 text-sm sm:text-base text-white font-semibold tracking-wide drop-shadow">
+                    {finalPopupCountdown > 0
+                      ? "Final Draw in..."
+                      : "🎉 Final Result"}
+                  </div>
+
+                  {finalPopupCountdown === 0 && (
+                    <button
+                      onClick={() => {
+                        console.log("👆 Manual close of final popup");
+                        setFinalPopupCountdown(null);
+                        setFinalPopupPreview(null);
+                      }}
+                      className="absolute top-4 right-4 bg-white text-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold hover:bg-gray-100 transition-colors"
+                    >
+                      ×
+                    </button>
+                  )}
                 </motion.div>
               </div>
             )}
@@ -617,7 +737,6 @@ const JackpotGame = () => {
               ).toFixed(2)}
             </span>
           </div>
-          {/* Barcode Display - Hidden on mobile */}
           <div className="hidden sm:flex items-center gap-2">
             <span className="font-bold text-sm">Barcode:</span>
             <input
@@ -641,6 +760,13 @@ const JackpotGame = () => {
           </button>
         </div>
       </footer>
+
+      {/* Confirmation Message Component */}
+      <ConfirmationMessage
+        message={confirmationMessage}
+        type={messageType}
+        onClose={() => setConfirmationMessage("")}
+      />
     </div>
   );
 };
