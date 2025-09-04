@@ -1,2 +1,4 @@
 - fixed the green boxes on bet placing
 - fixed the times 13:00 14:00 etc
+- fixed the deposit and withdrawals flow
+- added functionality at admin side to add or remove coins from user wallet

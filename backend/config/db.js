@@ -1,4 +1,4 @@
-// 📁 config/db.js (Fixed SQL syntax)
+// 📁 config/db.js (Updated with new wallet system tables and enum)
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -41,10 +41,10 @@ const pool = mysql.createPool({
     queueLimit: 0,
 });
 
-// ✅ Create all required tables based on your controllers (FIXED)
+// ✅ Create all required tables (Updated with new wallet system)
 export const createTables = async () => {
     try {
-        console.log('🔄 Creating tables based on controller analysis...');
+        console.log('🔄 Creating tables for manual wallet system...');
 
         // 1. Users table (authController.js)
         await pool.execute(`
@@ -80,7 +80,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 3. Results table (resultController.js) - FIXED INDEX
+        // 3. Results table (resultController.js)
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS results (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -93,7 +93,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 4. Withdrawals table (payoutController.js)
+        // 4. Withdrawals table (legacy - kept for backward compatibility)
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS withdrawals (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -110,7 +110,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 5. Transactions table (razorpayController.js)
+        // 5. Transactions table - Check if 'type' column exists before adding
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -132,7 +132,75 @@ export const createTables = async () => {
             )
         `);
 
-        // 6. Referrals table (referralController.js)
+        // Check and update 'type' column in transactions table
+        try {
+            const [columns] = await pool.execute(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'transactions' AND COLUMN_NAME = 'type'
+            `, [process.env.DB_NAME || 'jackpot']);
+
+            if (columns.length === 0) {
+                // Column doesn't exist, add it with all enum values
+                await pool.execute(`
+                    ALTER TABLE transactions 
+                    ADD COLUMN type ENUM('deposit', 'withdrawal', 'game', 'manual_credit', 'manual_debit') DEFAULT 'game'
+                `);
+                console.log('✅ Added type column to transactions table with all enum values');
+            } else {
+                // Column exists, update enum to include new values
+                try {
+                    await pool.execute(`
+                        ALTER TABLE transactions 
+                        MODIFY COLUMN type ENUM('deposit', 'withdrawal', 'game', 'manual_credit', 'manual_debit') DEFAULT 'game'
+                    `);
+                    console.log('✅ Updated type column enum values in transactions table');
+                } catch (enumError) {
+                    console.log('ℹ️ Type column enum might already be up to date');
+                }
+            }
+        } catch (err) {
+            console.log('ℹ️ Type column handling completed with warnings');
+        }
+
+        // 6. NEW: Deposit Requests table (for manual deposit system)
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS deposit_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                phone_number VARCHAR(15),
+                status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_status (status),
+                INDEX idx_user_id (user_id),
+                INDEX idx_created_at (created_at)
+            )
+        `);
+
+        // 7. NEW: Withdrawal Requests table (for manual withdrawal system)
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS withdrawal_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                bank_name VARCHAR(255) NOT NULL,
+                bank_account_number VARCHAR(20) NOT NULL,
+                ifsc_code VARCHAR(11) NOT NULL,
+                phone_number VARCHAR(15),
+                status ENUM('pending', 'completed', 'rejected') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_status (status),
+                INDEX idx_user_id (user_id),
+                INDEX idx_created_at (created_at)
+            )
+        `);
+
+        // 8. Referrals table (referralController.js)
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS referrals (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -145,7 +213,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 7. Referral Rewards table (authController.js)
+        // 9. Referral Rewards table (authController.js)
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS referral_rewards (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -163,12 +231,14 @@ export const createTables = async () => {
         console.log('✅ All tables created successfully!');
 
         // ✅ Log table creation summary
-        console.log('📊 Created tables:');
+        console.log('📊 Created/Updated tables:');
         console.log('   - users (authentication)');
         console.log('   - bets (betting system)');
         console.log('   - results (game results)');
-        console.log('   - withdrawals (payout requests)');
-        console.log('   - transactions (payment history)');
+        console.log('   - withdrawals (legacy payout requests)');
+        console.log('   - transactions (payment history - updated type enum)');
+        console.log('   - deposit_requests (NEW - manual deposit system)');
+        console.log('   - withdrawal_requests (NEW - manual withdrawal system)');
         console.log('   - referrals (referral codes)');
         console.log('   - referral_rewards (referral bonuses)');
 

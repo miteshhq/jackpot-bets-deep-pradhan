@@ -23,15 +23,48 @@ const Sidebar = ({ isOpen }) => {
   };
 
   const navItems = [
-    { to: "/admin-dashboard", icon: <FaTachometerAlt size={20} />, label: "Dashboard" },
+    {
+      to: "/admin-dashboard",
+      icon: <FaTachometerAlt size={20} />,
+      label: "Dashboard",
+    },
     { to: "/admin-users", icon: <FaUsers size={20} />, label: "Users" },
     { to: "/admin-bets", icon: <FaDice size={20} />, label: "Bets" },
-    { to: "/admin-transactions", icon: <FaFileInvoiceDollar size={20} />, label: "Transaction" },
-    { to: "/admin-results", icon: <FaExchangeAlt size={20} />, label: "Result" },
-    { to: "/admin-create-result", icon: <FaExchangeAlt size={20} />, label: "Create Result" },
-    { to: "/admin-payouts", icon: <FaMoneyCheckAlt size={20} />, label: "Payout Request" },
-    { to: "/admin-payout-list", icon: <FaListAlt size={20} />, label: "Payout List" },
-    { to: "/admin-user-specification", icon: <FaUser size={20} />, label: "User Specification" }, // New field added
+    {
+      to: "/admin-transactions",
+      icon: <FaFileInvoiceDollar size={20} />,
+      label: "Transaction",
+    },
+    {
+      to: "/admin-results",
+      icon: <FaExchangeAlt size={20} />,
+      label: "Result",
+    },
+    {
+      to: "/admin-create-result",
+      icon: <FaExchangeAlt size={20} />,
+      label: "Create Result",
+    },
+    {
+      to: "/admin-payouts",
+      icon: <FaMoneyCheckAlt size={20} />,
+      label: "Payout Request",
+    },
+    {
+      to: "/admin-deposits",
+      icon: <FaMoneyCheckAlt size={20} />,
+      label: "Deposit Request",
+    },
+    {
+      to: "/admin-payout-list",
+      icon: <FaListAlt size={20} />,
+      label: "Payout List",
+    },
+    {
+      to: "/admin-user-specification",
+      icon: <FaUser size={20} />,
+      label: "User Specification",
+    }, // New field added
   ];
 
   const linkClasses = `flex items-center gap-4 p-2 rounded-md transition-all duration-300 hover:bg-white hover:text-blue-700 font-medium`;

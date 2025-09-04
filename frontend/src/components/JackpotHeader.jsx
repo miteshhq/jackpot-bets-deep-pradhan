@@ -16,7 +16,6 @@ const JackpotHeader = () => {
   const [customAmount, setCustomAmount] = useState("");
   const [selectedAmount, setSelectedAmount] = useState(null);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState("");
   const [changes, setChanges] = useState(true);
 
   const token = localStorage.getItem("token");
@@ -43,7 +42,7 @@ const JackpotHeader = () => {
     if (!user?.id) return;
     try {
       const { data } = await axios.get(
-        `${BACKEND_URL}/api/razorpay/get-balance/${user.id}`
+        `${BACKEND_URL}/api/wallet/get-balance/${user.id}`
       );
       const numericBalance = parseFloat(data.balance) || 0;
       setBalance(numericBalance);
@@ -61,70 +60,35 @@ const JackpotHeader = () => {
     }
   }, [user?.id, changes]);
 
-  const handleRecharge = async (amountToUse) => {
+  const handleDepositRequest = async (amountToUse) => {
     const amount = Number(amountToUse || customAmount);
     if (!amount || amount < 1) return alert("Enter a valid amount");
 
     try {
-      const { data: order } = await axios.post(
-        `${BACKEND_URL}/api/razorpay/create-order`,
-        { amount }
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${BACKEND_URL}/api/wallet/deposit/request`,
+        {
+          userId: user.id,
+          amount,
+          phoneNumber: user.phone || "N/A",
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
-      const options = {
-        key: "rzp_test_KWHOY0WO6jsYCk",
-        amount: order.amount,
-        currency: order.currency,
-        name: "Jackpot Game",
-        description: "Balance Recharge",
-        image: "https://yourcdn.com/jackpot.png",
-        order_id: order.id,
-        handler: async (response) => {
-          try {
-            await axios.post(`${BACKEND_URL}/api/razorpay/verify-payment`, {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              userId: user.id,
-              amount,
-            });
-            alert("✅ Recharge Successful!");
-            await fetchBalance();
-            setShowModal(false);
-          } catch (err) {
-            console.error(err);
-            alert("❌ Payment verification failed");
-          }
-        },
-        prefill: {
-          name: user.username || "User",
-          email: user.email,
-        },
-        theme: { color: "#00b894" },
-      };
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      alert(
+        "✅ Deposit request submitted! Admin will contact you on WhatsApp for payment verification."
+      );
+      setShowModal(false);
+      setSelectedAmount(null);
+      setCustomAmount("");
     } catch (err) {
-      console.error("❌ Razorpay order error:", err);
-      alert("Something went wrong while creating the order");
-    }
-  };
-
-  const handlePayoutRequest = async () => {
-    const amount = Number(payoutAmount);
-    if (!amount || amount < 1) {
-      alert("Enter a valid payout amount");
-      return;
-    }
-    try {
-      const payload = { userId: user.id, amount };
-      await axios.post(`${BACKEND_URL}/api/payout/request`, payload);
-      alert("✅ Payout request submitted");
-      setChanges(!changes);
-      setPayoutAmount("");
-      setShowPayoutModal(false);
-    } catch (err) {
-      console.error("❌ Payout request error:", err);
-      alert("Something went wrong while requesting payout");
+      console.error("❌ Deposit request error:", err);
+      alert(
+        err.response?.data?.message ||
+          "Something went wrong while creating deposit request"
+      );
     }
   };
 
@@ -134,10 +98,6 @@ const JackpotHeader = () => {
         {/* Mobile Layout */}
         <div className="flex md:hidden flex-col ">
           <div className="flex justify-center items-center">
-            {/* <div className="flex items-center space-x-1 text-xs mb-1">
-              <span className="font-bold">Time Left :</span>
-              <span className="text-base font-mono">{formatTime(timeLeft)}</span>
-            </div> */}
             <img
               src={jackpotLogo}
               alt="Jackpot"
@@ -159,7 +119,6 @@ const JackpotHeader = () => {
             <p className="font-semibold whitespace-nowrap">
               Time Left : {formatTime(timeLeft)}
             </p>
-            {/* <span className="font-semibold whitespace-nowrap">Agent: {user?.id || 'N/A'}</span> */}
             <p className="font-semibold whitespace-nowrap">
               {new Date().toLocaleTimeString()}
             </p>
@@ -239,13 +198,19 @@ const JackpotHeader = () => {
         </div>
       </div>
 
-      {/* Recharge Modal */}
+      {/* Deposit Request Modal */}
       {showModal && (
         <div className="fixed z-50 inset-0 flex justify-center items-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-purple-300 relative">
             <h2 className="text-2xl font-bold text-center mb-6 text-purple-600">
-              💸 Recharge Wallet
+              💸 Request Deposit
             </h2>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                📱 <strong>Process:</strong> Admin will contact you on WhatsApp
+                for UPI payment after you submit this request.
+              </p>
+            </div>
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[10, 50, 100, 500, 1000, 2000, 5000].map((amt) => (
                 <button
@@ -283,10 +248,12 @@ const JackpotHeader = () => {
                 Cancel
               </button>
               <button
-                onClick={() => handleRecharge(selectedAmount || customAmount)}
+                onClick={() =>
+                  handleDepositRequest(selectedAmount || customAmount)
+                }
                 className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
               >
-                Submit
+                Submit Request
               </button>
             </div>
           </div>

@@ -13,19 +13,18 @@ import BetDetails from "./pages/BetDetails";
 import DashboardLayout from "./admin/DashboardLayout";
 import AdminDashboard from "./admin/AdminDashboard";
 import Bets from "./admin/Bets";
-import Results from "./admin/Results";  // <-- Import Results here
-import Transaction from "./admin/Transaction"
-import User from "./admin/User"
-import CreateResult from "./admin/CreateResult"
-import PayoutRequest from "./admin/PayoutRequest"
+import Results from "./admin/Results"; // <-- Import Results here
+import Transaction from "./admin/Transaction";
+import User from "./admin/User";
+import CreateResult from "./admin/CreateResult";
+import PayoutRequest from "./admin/PayoutRequest";
 import PayoutList from "./admin/PayoutList";
 import PrintF12 from "./pages/PrintF12";
 import ResultR from "./pages/ResultR";
-import ReportS from "./pages/ReportS"
+import ReportS from "./pages/ReportS";
 import ForgetPassword from "./components/ForgetPassword";
-import UserSpecification from "./admin/UserSpecification";  // Adjust the path if needed
-
-
+import UserSpecification from "./admin/UserSpecification"; // Adjust the path if needed
+import DepositRequests from "./admin/DepositRequests";
 
 const App = () => {
   return (
@@ -38,16 +37,12 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgetPassword />} />
 
-
-
         {/* Game route */}
         <Route path="/game" element={<NewJackpot />} />
         <Route path="/bet-details" element={<BetDetails />} />
         <Route path="/print-f12" element={<PrintF12 />} />
         <Route path="/result-r" element={<ResultR />} />
         <Route path="/report-s" element={<ReportS />} />
-
-
 
         {/* Admin Dashboard route */}
         <Route
@@ -111,6 +106,14 @@ const App = () => {
           }
         />
         <Route
+          path="/admin-deposits"
+          element={
+            <DashboardLayout>
+              <DepositRequests />
+            </DashboardLayout>
+          }
+        />
+        <Route
           path="/admin-payout-list"
           element={
             <DashboardLayout>
@@ -126,8 +129,6 @@ const App = () => {
             </DashboardLayout>
           }
         />
-
-
       </Routes>
     </Router>
   );
@@ -135,11 +136,4 @@ const App = () => {
 
 export default App;
 
-
-
-
-
 // f4d751b8c1f8d5c3208e3ca6c998c7da73198
-
-
-
