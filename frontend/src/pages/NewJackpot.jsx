@@ -6,6 +6,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import io from "socket.io-client";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom"; // ADD THIS IMPORT
 
 const ShufflingNumber = ({ preview, isFinal }) => {
   const [display, setDisplay] = React.useState("--");
@@ -71,13 +72,14 @@ const getCurrentRoundTime = () => {
   return timeString.replace(/am|pm/, (match) => match.toUpperCase());
 };
 
-// ✅ Barcode Generator: 7-digit starting with "5"
+// Barcode Generator: 7-digit starting with "5"
 const generateBarcode = () => {
   const randomSix = Math.floor(100000 + Math.random() * 900000);
   return `5${randomSix.toString().slice(0, 6)}`;
 };
 
 const JackpotGame = () => {
+  const navigate = useNavigate(); // ADD THIS LINE
   const [betNumbers, setBetNumbers] = useState(new Set());
 
   const [finalPopupCountdown, setFinalPopupCountdown] = useState(null);
@@ -114,10 +116,10 @@ const JackpotGame = () => {
     setEValues(Array(10).fill(""));
     setRowValues(Array(10).fill(""));
     setBetNumbers(new Set());
-    localStorage.removeItem("placedNumbers"); // ✅ clear on reset
+    localStorage.removeItem("placedNumbers");
   };
 
-  // ----------------- BARCODE -----------------
+  // BARCODE functionality
   useEffect(() => {
     let timeoutId;
 
@@ -147,7 +149,7 @@ const JackpotGame = () => {
     return () => clearTimeout(timeoutId);
   }, [barcode]);
 
-  // ----------------- TIMER -----------------
+  // TIMER
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentDrawTime(getCurrentRoundTime());
@@ -155,28 +157,7 @@ const JackpotGame = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // ----------------- SOCKET -----------------
-  // useEffect(() => {
-  //   socketRef.current = io(SOCKET_URL, {
-  //     transports: ["websocket"],
-  //     query: {
-  //       userId: user?.id || "",  // 🟢 Pass userId if available
-  //     },
-  //   });
-
-  //   socketRef.current.on("connect", () => {
-  //     console.log("🟢 Connected to socket.io server");
-  //   });
-
-  //   socketRef.current.on("timer-update", (secondsLeft) => {
-  //     setTimeLeft(secondsLeft);
-  //   });
-
-  //   return () => {
-  //     socketRef.current.disconnect();
-  //   };
-  // }, [user]);
-
+  // SOCKET
   useEffect(() => {
     socketRef.current = io(SOCKET_URL, {
       transports: ["websocket"],
@@ -189,7 +170,6 @@ const JackpotGame = () => {
 
     socketRef.current.on("timer-update", (sec) => setTimeLeft(sec));
 
-    // ✅ Add this inside the useEffect, not outside JSX
     socketRef.current.on("final-popup", ({ countdown, preview, isResult }) => {
       console.log("📩 final-popup received:", { countdown, preview, isResult });
 
@@ -210,44 +190,7 @@ const JackpotGame = () => {
     return () => socketRef.current.disconnect();
   }, [user]);
 
-  // ----------------- FINAL POPUP (RESULT) -----------------
-  useEffect(() => {
-    if (!socketRef.current) return;
-
-    const handler = ({ countdown, preview, isResult }) => {
-      console.log("📩 final-popup received:", {
-        countdown,
-        preview,
-        isResult,
-      });
-
-      if (countdown === null) {
-        console.log("🛑 Countdown is null, closing popup.");
-        setFinalPopupCountdown(null);
-        setFinalPopupPreview(null);
-        setBetNumbers(new Set());
-        localStorage.removeItem("placedNumbers");
-        return;
-      }
-
-      if (isResult && countdown === 0) {
-        console.log("✅ Final result received:", preview);
-        setFinalPopupCountdown(0);
-        setFinalPopupPreview(preview);
-      } else if (countdown > 0) {
-        console.log("⏳ Countdown ongoing:", countdown, "Preview:", preview);
-        setFinalPopupCountdown(countdown);
-        setFinalPopupPreview(preview);
-      }
-    };
-
-    socketRef.current.on("final-popup", handler);
-
-    return () => {
-      socketRef.current.off("final-popup", handler);
-    };
-  }, []);
-  // ----------------- LOAD SAVED BETS -----------------
+  // LOAD SAVED BETS
   useEffect(() => {
     const saved = localStorage.getItem("placedNumbers");
     if (saved) {
@@ -260,7 +203,7 @@ const JackpotGame = () => {
     }
   }, [currentDrawTime]);
 
-  // ----------------- PLACE BET -----------------
+  // UPDATED PLACE BET - WITH AUTO PRINT
   const handlePlaceBet = async () => {
     if (!user) return alert("❌ Please login first.");
     if (timeLeft <= 15)
@@ -274,7 +217,7 @@ const JackpotGame = () => {
         const amount = parseFloat(value);
         if (!isNaN(amount) && amount > 0) {
           const number = rowIndex * 10 + colIndex;
-          bets.push({ number, stake: amount });
+          bets.push({ number, points: amount }); // Changed 'stake' to 'points' for PrintF12 compatibility
           placedNumbers.add(number);
         }
       });
@@ -286,9 +229,9 @@ const JackpotGame = () => {
     try {
       const roundTime = getCurrentRoundTime();
       const totalAmount =
-        bets.reduce((sum, bet) => sum + bet.stake, 0) * footerAmount;
+        bets.reduce((sum, bet) => sum + bet.points, 0) * footerAmount;
       const confirmed = window.confirm(
-        `Confirm placing ₹${totalAmount.toFixed(2)} in bets?`
+        `Confirm placing Rs.${totalAmount.toFixed(2)} in bets?`
       );
       if (!confirmed) return;
 
@@ -299,14 +242,13 @@ const JackpotGame = () => {
         await axios.post(`${BACKEND_URL}/api/bets/place`, {
           userId: user.id,
           number: bet.number,
-          stake: bet.stake,
+          stake: bet.points,
           roundTime,
           barcode: newBarcode,
         });
       }
 
-      // ✅ Save in state + localStorage
-      // ✅ Save in state + localStorage (MERGE logic)
+      // Save in state + localStorage
       setBetNumbers((prev) => {
         const updated = new Set([...prev, ...placedNumbers]);
         localStorage.setItem(
@@ -318,13 +260,23 @@ const JackpotGame = () => {
 
       alert(`✅ Bet placed successfully!\n🧾 Barcode: ${newBarcode}`);
       setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
+
+      // 🔥 AUTO PRINT: Navigate to print page with bet details
+      navigate("/print-f12", {
+        state: {
+          selectedBets: bets,
+          barcode: newBarcode,
+          roundTime,
+          autoPrint: true, // Flag to indicate automatic print
+        },
+      });
     } catch (err) {
       console.error("❌ Bet error:", err.response?.data || err.message);
       alert("❌ Failed to place bet. Please check your balance or try again.");
     }
   };
 
-  // ----------------- LP CLICK -----------------
+  // LP CLICK functionality
   const handleLPClick = () => {
     const count = parseInt(lpValue);
     if (isNaN(count) || count <= 0 || count > 5) {
@@ -388,7 +340,7 @@ const JackpotGame = () => {
                 sm:h-[28px] sm:w-12 sm:text-xs disabled:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500
                 ${
                   betNumbers?.has(num)
-                    ? "bg-white" // ✅ bet placed → green (updated to white now)
+                    ? "bg-white"
                     : parseFloat(gridValues[rowIndex][colIndex]) > 0
                     ? "bg-yellow-300"
                     : "bg-white"
@@ -407,6 +359,7 @@ const JackpotGame = () => {
                       </div>
                     ))}
                   </div>
+
                   {/* Right Side E Inputs - Hidden on Mobile */}
                   <div className="hidden sm:flex w-[15%] flex-row ml-1 pt-[2px]">
                     <div className="flex flex-col space-y-[5.5px]">
@@ -508,7 +461,8 @@ const JackpotGame = () => {
                     </div>
                   </div>
                 </div>
-                {/* ✅ Mobile E & Row Inputs - under the grid, inside blue box */}
+
+                {/* Mobile E & Row Inputs */}
                 <div className="block sm:hidden w-full mt-3 space-y-2">
                   {/* E0 - E9 labels */}
                   <div className="grid grid-cols-10 gap-[6px] justify-items-center">
@@ -555,7 +509,7 @@ const JackpotGame = () => {
                       />
                     ))}
                   </div>
-                  {/* Range Labels (like 0-9, 10-19...) */}
+                  {/* Range Labels */}
                   <div className="grid grid-cols-10 gap-[6px] justify-items-center">
                     {[...Array(10)].map((_, i) => (
                       <div
@@ -622,8 +576,10 @@ const JackpotGame = () => {
                 </div>
               </div>
             </div>
+
+            {/* Final Popup */}
             {finalPopupCountdown !== null && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm">
+              <div className="fixed inset-0 z-50 flex items-center justify-center">
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -632,26 +588,10 @@ const JackpotGame = () => {
             bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 
             rounded-full flex items-center justify-center shadow-2xl border-8 border-white"
                 >
-                  {/* 🎰 Shuffling / Final Result */}
                   <ShufflingNumber
                     preview={finalPopupPreview}
                     isFinal={finalPopupCountdown === 0}
                   />
-
-                  {/* Countdown Circle */}
-                  {finalPopupCountdown > 0 && (
-                    <div className="absolute bottom-2 right-2 bg-white w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] rounded-full flex items-center justify-center shadow-md">
-                      <span className="text-black text-2xl sm:text-3xl font-bold">
-                        {finalPopupCountdown.toString().padStart(2, "0")}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="absolute top-2 text-sm sm:text-base text-white font-semibold tracking-wide drop-shadow">
-                    {finalPopupCountdown > 0
-                      ? "Final Draw in..."
-                      : "Final Result"}
-                  </div>
                 </motion.div>
               </div>
             )}
@@ -661,6 +601,8 @@ const JackpotGame = () => {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
       <footer className="mt-auto bg-yellow-200 rounded-t-md p-3 shadow-inner border-t border-yellow-300 mx-2">
         <div className="flex justify-between items-center flex-wrap gap-4">
           <div className="flex items-center gap-2">
@@ -699,44 +641,8 @@ const JackpotGame = () => {
           </button>
         </div>
       </footer>
-      {/* {showBarcodePopup && barcodeResults.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-yellow-400 shadow-xl max-h-[40vh] overflow-y-auto z-50 p-4">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="font-bold text-lg text-blue-800">🧾 Barcode Bets ({barcode})</h2>
-            <button onClick={() => setShowBarcodePopup(false)} className="text-red-500 font-bold">Close ✖</button>
-          </div>
-          <table className="w-full text-sm border">
-            <thead className="bg-yellow-100 border">
-              <tr>
-                <th className="border px-2 py-1">#</th>
-                <th className="border px-2 py-1">Number</th>
-                <th className="border px-2 py-1">Qty</th>
-                <th className="border px-2 py-1">Amount</th>
-                <th className="border px-2 py-1">Win</th>
-                <th className="border px-2 py-1">Draw Time</th>
-                <th className="border px-2 py-1">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {barcodeResults.map((bet, index) => (
-                <tr key={bet.id} className="text-center border-t">
-                  <td className="border px-2 py-1">{index + 1}</td>
-                  <td className="border px-2 py-1 font-bold">{bet.number}</td>
-                  <td className="border px-2 py-1">{parseFloat(bet.qty).toFixed(0)}</td>
-
-                  <td className="border px-2 py-1">₹{bet.amount}</td>
-                  <td className="border px-2 py-1 text-green-700 font-semibold">₹{bet.winAmount}</td>
-                  <td className="border px-2 py-1">{bet.drawTime}</td>
-                  <td className={`border px-2 py-1 font-semibold ${bet.status === 'won' ? 'text-green-600' : 'text-gray-600'}`}>
-                    {bet.status.toUpperCase()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )} */}
     </div>
   );
 };
+
 export default JackpotGame;

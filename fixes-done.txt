@@ -2,3 +2,6 @@
 - fixed the times 13:00 14:00 etc
 - fixed the deposit and withdrawals flow
 - added functionality at admin side to add or remove coins from user wallet
+
+add new admin with new number and password changing option
+for game 
