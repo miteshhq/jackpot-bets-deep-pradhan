@@ -1,10 +1,17 @@
-import { useState } from 'react';
-import axios from 'axios';
+import { useState } from "react";
+import axios from "axios";
 
-function Footer({ gridValues, footerAmount, barcode, isLocked, timeLeft, handlePlaceBet }) {
-  const [searchBarcode, setSearchBarcode] = useState('');
+function Footer({
+  gridValues,
+  footerAmount,
+  barcode,
+  isLocked,
+  timeLeft,
+  handlePlaceBet,
+}) {
+  const [searchBarcode, setSearchBarcode] = useState("");
   const [betList, setBetList] = useState([]);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
 
   const totalStake = (
     gridValues.flat().reduce((sum, val) => {
@@ -20,12 +27,13 @@ function Footer({ gridValues, footerAmount, barcode, isLocked, timeLeft, handleP
       return;
     }
 
-    axios.get(`/api/bets/by-barcode/${searchBarcode}`)
-      .then(res => {
+    axios
+      .get(`/api/bets/by-barcode/${searchBarcode}`)
+      .then((res) => {
         setBetList(res.data);
-        setErrorMsg('');
+        setErrorMsg("");
       })
-      .catch(err => {
+      .catch((err) => {
         setBetList([]);
         if (err.response?.status === 404) {
           setErrorMsg("❌ Is barcode se koi bet nahi mili");
@@ -43,7 +51,9 @@ function Footer({ gridValues, footerAmount, barcode, isLocked, timeLeft, handleP
           {/* Total Stake */}
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm">Total Stake:</span>
-            <span className="text-lg font-bold text-blue-900">₹{totalStake}</span>
+            <span className="text-lg font-bold text-blue-900">
+              💎{totalStake}
+            </span>
           </div>
 
           {/* Display Current Barcode - Hidden on mobile */}
@@ -91,7 +101,9 @@ function Footer({ gridValues, footerAmount, barcode, isLocked, timeLeft, handleP
           </button>
         </div>
 
-        {errorMsg && <div className="text-red-500 text-sm mb-2">{errorMsg}</div>}
+        {errorMsg && (
+          <div className="text-red-500 text-sm mb-2">{errorMsg}</div>
+        )}
 
         {betList.length > 0 && (
           <div className="overflow-auto">
@@ -113,7 +125,7 @@ function Footer({ gridValues, footerAmount, barcode, isLocked, timeLeft, handleP
                     <td>{index + 1}</td>
                     <td>{bet.barcode}</td>
                     <td>{bet.drawTime}</td>
-                    <td>₹2.00</td>
+                    <td>💎2.00</td>
                     <td>{Number(bet.qty).toFixed(2)}</td>
                     <td>{Number(bet.amount).toFixed(2)}</td>
                     <td>{Number(bet.winAmount).toFixed(2)}</td>
@@ -129,4 +141,3 @@ function Footer({ gridValues, footerAmount, barcode, isLocked, timeLeft, handleP
 }
 
 export default Footer;
-

@@ -84,7 +84,7 @@ const DepositRequests = () => {
             <th className="border p-2">Request ID</th>
             <th className="border p-2">User ID</th>
             <th className="border p-2">Phone</th>
-            <th className="border p-2">Amount (₹)</th>
+            <th className="border p-2">Amount (💎)</th>
             <th className="border p-2">Status</th>
             <th className="border p-2">Date</th>
             <th className="border p-2">Action</th>
@@ -105,7 +105,7 @@ const DepositRequests = () => {
                   {req.phone_number}
                 </a>
               </td>
-              <td className="border p-2">₹{req.amount}</td>
+              <td className="border p-2">💎{req.amount}</td>
               <td className="border p-2">
                 <span
                   className={`px-2 py-1 rounded text-xs ${

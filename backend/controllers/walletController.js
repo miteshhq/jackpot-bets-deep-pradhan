@@ -285,7 +285,7 @@ export const adminAddCoins = async (req, res) => {
         );
 
         await db.query('COMMIT');
-        res.json({ message: `Successfully added ₹${amount} to user ${userId}` });
+        res.json({ message: `Successfully added 💎${amount} to user ${userId}` });
     } catch (err) {
         await db.query('ROLLBACK');
         console.error('❌ Error adding coins:', err);
@@ -310,7 +310,7 @@ export const adminRemoveCoins = async (req, res) => {
 
         if (userRows[0].balance < amount) {
             return res.status(400).json({
-                message: `Insufficient balance. User has ₹${userRows[0].balance} but trying to remove ₹${amount}`
+                message: `Insufficient balance. User has 💎${userRows[0].balance} but trying to remove 💎${amount}`
             });
         }
 
@@ -328,7 +328,7 @@ export const adminRemoveCoins = async (req, res) => {
         );
 
         await db.query('COMMIT');
-        res.json({ message: `Successfully removed ₹${amount} from user ${userId}` });
+        res.json({ message: `Successfully removed 💎${amount} from user ${userId}` });
     } catch (err) {
         await db.query('ROLLBACK');
         console.error('❌ Error removing coins:', err);

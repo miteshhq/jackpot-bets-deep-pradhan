@@ -96,6 +96,247 @@ export const getCancelledAmount = async (req, res) => {
   }
 };
 
+export const getDepositsReport = async (req, res) => {
+    const { from, to } = req.query;
 
+    if (!from || !to) {
+        return res.status(400).json({ msg: "From and To dates are required" });
+    }
 
+    try {
+        const [deposits] = await db.query(`
+      SELECT 
+        status,
+        SUM(amount) as total_amount,
+        COUNT(*) as count
+      FROM deposit_requests 
+      WHERE DATE(created_at) BETWEEN ? AND ?
+      GROUP BY status
+    `, [from, to]);
 
+        let approvedDeposits = 0;
+        let pendingDeposits = 0;
+        let rejectedDeposits = 0;
+        let totalDepositRequests = 0;
+
+        for (const deposit of deposits) {
+            totalDepositRequests += deposit.count;
+            switch (deposit.status) {
+                case 'approved':
+                    approvedDeposits = deposit.total_amount;
+                    break;
+                case 'pending':
+                    pendingDeposits = deposit.total_amount;
+                    break;
+                case 'rejected':
+                    rejectedDeposits = deposit.total_amount;
+                    break;
+            }
+        }
+
+        return res.json({
+            approvedDeposits,
+            pendingDeposits,
+            rejectedDeposits,
+            totalDeposits: approvedDeposits + pendingDeposits + rejectedDeposits,
+            totalDepositRequests
+        });
+    } catch (err) {
+        console.error("❌ Deposits report error:", err);
+        return res.status(500).json({ msg: "Server error" });
+    }
+};
+
+export const getWithdrawalsReport = async (req, res) => {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+        return res.status(400).json({ msg: "From and To dates are required" });
+    }
+
+    try {
+        const [withdrawals] = await db.query(`
+      SELECT 
+        status,
+        SUM(amount) as total_amount,
+        COUNT(*) as count
+      FROM withdrawal_requests 
+      WHERE DATE(created_at) BETWEEN ? AND ?
+      GROUP BY status
+    `, [from, to]);
+
+        let completedWithdrawals = 0;
+        let pendingWithdrawals = 0;
+        let rejectedWithdrawals = 0;
+        let totalWithdrawalRequests = 0;
+
+        for (const withdrawal of withdrawals) {
+            totalWithdrawalRequests += withdrawal.count;
+            switch (withdrawal.status) {
+                case 'completed':
+                    completedWithdrawals = withdrawal.total_amount;
+                    break;
+                case 'pending':
+                    pendingWithdrawals = withdrawal.total_amount;
+                    break;
+                case 'rejected':
+                    rejectedWithdrawals = withdrawal.total_amount;
+                    break;
+            }
+        }
+
+        return res.json({
+            completedWithdrawals,
+            pendingWithdrawals,
+            rejectedWithdrawals,
+            totalWithdrawals: completedWithdrawals + pendingWithdrawals + rejectedWithdrawals,
+            totalWithdrawalRequests
+        });
+    } catch (err) {
+        console.error("❌ Withdrawals report error:", err);
+        return res.status(500).json({ msg: "Server error" });
+    }
+};
+
+export const getDailyStatsReport = async (req, res) => {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+        return res.status(400).json({ msg: "From and To dates are required" });
+    }
+
+    try {
+        const [stats] = await db.query(`
+      SELECT 
+        DATE(placedAt) as date,
+        COUNT(*) as total_bets,
+        SUM(stake * 2) as total_volume,
+        SUM(CASE WHEN status = 'won' THEN stake * 2 * 80 * COALESCE(bonus, 1) ELSE 0 END) as total_payouts,
+        COUNT(CASE WHEN status = 'won' THEN 1 END) as winning_bets,
+        COUNT(CASE WHEN status = 'lost' THEN 1 END) as losing_bets,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bets
+      FROM bets 
+      WHERE DATE(placedAt) BETWEEN ? AND ?
+      GROUP BY DATE(placedAt)
+      ORDER BY DATE(placedAt) DESC
+    `, [from, to]);
+
+        return res.json(stats);
+    } catch (err) {
+        console.error("❌ Daily stats error:", err);
+        return res.status(500).json({ msg: "Server error" });
+    }
+};
+
+export const getProfitLossReport = async (req, res) => {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+        return res.status(400).json({ msg: "From and To dates are required" });
+    }
+
+    try {
+        const [profitLoss] = await db.query(`
+      SELECT 
+        SUM(stake * 2) as total_revenue,
+        SUM(CASE WHEN status = 'won' THEN stake * 2 * 80 * COALESCE(bonus, 1) ELSE 0 END) as total_payouts,
+        (SUM(stake * 2) - SUM(CASE WHEN status = 'won' THEN stake * 2 * 80 * COALESCE(bonus, 1) ELSE 0 END)) as net_profit
+      FROM bets 
+      WHERE DATE(placedAt) BETWEEN ? AND ?
+    `, [from, to]);
+
+        const data = profitLoss[0];
+        const totalRevenue = parseFloat(data.total_revenue || 0);
+        const totalPayouts = parseFloat(data.total_payouts || 0);
+        const netProfit = parseFloat(data.net_profit || 0);
+        const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100) : 0;
+
+        return res.json({
+            totalRevenue,
+            totalPayouts,
+            netProfit,
+            profitMargin
+        });
+    } catch (err) {
+        console.error("❌ Profit/Loss report error:", err);
+        return res.status(500).json({ msg: "Server error" });
+    }
+};
+
+export const getUserStatsReport = async (req, res) => {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+        return res.status(400).json({ msg: "From and To dates are required" });
+    }
+
+    try {
+        const [userStats] = await db.query(`
+      SELECT 
+        COUNT(DISTINCT user_id) as active_users,
+        COUNT(*) as total_bets,
+        AVG(stake) as avg_bet_amount
+      FROM bets 
+      WHERE DATE(placedAt) BETWEEN ? AND ?
+    `, [from, to]);
+
+        const [newUsers] = await db.query(`
+      SELECT COUNT(*) as new_users
+      FROM users 
+      WHERE DATE(created_at) BETWEEN ? AND ?
+    `, [from, to]);
+
+        const [totalUsers] = await db.query(`
+      SELECT COUNT(*) as total_users FROM users
+    `);
+
+        const activeUsers = userStats[0].active_users || 0;
+        const totalBets = userStats[0].total_bets || 0;
+        const avgBetPerUser = activeUsers > 0 ? (totalBets / activeUsers) : 0;
+
+        return res.json({
+            activeUsers,
+            newUsers: newUsers[0].new_users || 0,
+            totalUsers: totalUsers[0].total_users || 0,
+            avgBetPerUser: parseFloat(userStats[0].avg_bet_amount || 0) * avgBetPerUser
+        });
+    } catch (err) {
+        console.error("❌ User stats error:", err);
+        return res.status(500).json({ msg: "Server error" });
+    }
+};
+
+export const getBetsSummaryReport = async (req, res) => {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+        return res.status(400).json({ msg: "From and To dates are required" });
+    }
+
+    try {
+        const [summary] = await db.query(`
+      SELECT 
+        COUNT(CASE WHEN status = 'won' THEN 1 END) as winning_bets,
+        COUNT(CASE WHEN status = 'lost' THEN 1 END) as losing_bets,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bets,
+        SUM(CASE WHEN status = 'won' THEN stake * 2 * 80 * COALESCE(bonus, 1) ELSE 0 END) as total_payouts,
+        COUNT(*) as total_bets
+      FROM bets 
+      WHERE DATE(placedAt) BETWEEN ? AND ?
+    `, [from, to]);
+
+        const data = summary[0];
+        const winRate = data.total_bets > 0 ? ((data.winning_bets / data.total_bets) * 100) : 0;
+
+        return res.json({
+            winningBets: data.winning_bets || 0,
+            losingBets: data.losing_bets || 0,
+            pendingBets: data.pending_bets || 0,
+            totalPayouts: data.total_payouts || 0,
+            winRate
+        });
+    } catch (err) {
+        console.error("❌ Bets summary error:", err);
+        return res.status(500).json({ msg: "Server error" });
+    }
+};

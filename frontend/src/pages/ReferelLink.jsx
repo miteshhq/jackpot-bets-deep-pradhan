@@ -1,7 +1,7 @@
 // Referral.jsx
 import React, { useState } from "react";
 import axios from "axios";
-import {jwtDecode} from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 const Referral = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -25,18 +25,20 @@ const Referral = () => {
       const referralLink = data.link;
 
       if (navigator.share) {
-        navigator.share({
-          title: "Join Jackpot Game",
-          text: "Get ₹20 bonus! Join using my link.",
-          url: referralLink,
-        }).catch(console.error);
+        navigator
+          .share({
+            title: "Join Jackpot Game",
+            text: "Get 💎20 bonus! Join using my link.",
+            url: referralLink,
+          })
+          .catch(console.error);
       } else {
         await navigator.clipboard.writeText(referralLink);
         alert("Referral link copied to clipboard!");
       }
 
       if (data.bonusReceived) {
-        alert("🎉 Congrats! You earned ₹10 from your friend's registration.");
+        alert("🎉 Congrats! You earned 💎10 from your friend's registration.");
       }
     } catch (err) {
       console.error("Referral error:", err);
@@ -54,7 +56,7 @@ const Referral = () => {
         🎁{" "}
         {loading
           ? "Generating your referral link..."
-          : "Refer friends and get ₹20 for each successful referral! 🎁"}
+          : "Refer friends and get 💎20 for each successful referral! 🎁"}
       </div>
 
       <style>
@@ -62,7 +64,7 @@ const Referral = () => {
           .animate-marquee {
             display: inline-block;
             padding-left: 100%;
-            animation: marquee 12s linear infinite;
+            animation: marquee 30s linear infinite;
           }
           @keyframes marquee {
             0% { transform: translate(0, 0); }
@@ -75,5 +77,3 @@ const Referral = () => {
 };
 
 export default Referral;
-
-

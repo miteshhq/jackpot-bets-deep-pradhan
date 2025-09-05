@@ -81,7 +81,7 @@ const PayOutRequest = () => {
             <th className="border p-2">Bank Name</th>
             <th className="border p-2">Account Number</th>
             <th className="border p-2">IFSC Code</th>
-            <th className="border p-2">Amount (₹)</th>
+            <th className="border p-2">Amount (💎)</th>
             <th className="border p-2">Status</th>
             <th className="border p-2">Date</th>
             <th className="border p-2">Action</th>
@@ -105,7 +105,7 @@ const PayOutRequest = () => {
               <td className="border p-2">{req.bank_name}</td>
               <td className="border p-2">{req.bank_account_number}</td>
               <td className="border p-2">{req.ifsc_code}</td>
-              <td className="border p-2">₹{req.amount}</td>
+              <td className="border p-2">💎{req.amount}</td>
               <td className="border p-2">
                 <span
                   className={`px-2 py-1 rounded text-xs ${

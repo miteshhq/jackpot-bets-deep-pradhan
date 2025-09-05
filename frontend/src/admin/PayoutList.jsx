@@ -37,12 +37,16 @@ const PayoutList = () => {
         <tbody>
           {payouts.map((p) => (
             <tr key={p.id} className="text-sm">
-              <td className="border p-2">Phone: {p.phone || 'N/A'} (ID: {p.user_id})</td>
+              <td className="border p-2">
+                Phone: {p.phone || "N/A"} (ID: {p.user_id})
+              </td>
               <td className="border p-2">{p.bank_name}</td>
               <td className="border p-2">{p.bank_account_number}</td>
               <td className="border p-2">{p.ifsc_code}</td>
-              <td className="border p-2">₹{p.amount}</td>
-              <td className="border p-2">{new Date(p.created_at).toLocaleString()}</td>
+              <td className="border p-2">💎{p.amount}</td>
+              <td className="border p-2">
+                {new Date(p.created_at).toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -52,6 +56,3 @@ const PayoutList = () => {
 };
 
 export default PayoutList;
-
-
-

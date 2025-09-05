@@ -1,8 +1,19 @@
-- fixed the green boxes on bet placing
+- fixed the green boxes on bet placing and automated clearing for continuous bet placings
 - fixed the times 13:00 14:00 etc
 - fixed the deposit and withdrawals flow
 - added functionality at admin side to add or remove coins from user wallet
 - automated printing
-- fixing of lottery shuffling number
-- other minor updates
-
+- remove yellow boxes user side - done
+- slow the sliding refer freinds get 20 - done
+- chagne rupess to diamonds - done
+- make sure number pad is used when selecting a number in the bet - mobile side. - done
+- padding fixes in mobile view - in the jackpot results section - done
+- change all rupees symbols to diamonds everywhere - done
+- time left for next shuffling numbers - increase size and other info in header - highlight it - done
+- add header on top of the jackpot results - saying Jackpot Results - done
+- fix the bonus multiplieer not working - done
+- fix the shuffling of numbers - going endlessly - it should not ! - done
+- to add printing functionaltiy of any bet customer applied to  any time he/she wants - done
+- reports - auto how much is sold and how much is withdrwan - loss profit etc all sort of business stats should be auto calculated.
+- give guide to user how to play
+- enering barcode will search for user and bet info and won price - and user can claim the amount and that amount will get deducted from his balance. - in bet details

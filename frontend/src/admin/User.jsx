@@ -112,8 +112,8 @@ const User = () => {
     { name: "ID", selector: (row) => row.id, sortable: true, width: "70px" },
     { name: "Phone", selector: (row) => row.phone || "N/A", sortable: true },
     {
-      name: "Balance (₹)",
-      selector: (row) => `₹${Number(row.balance).toFixed(2)}`,
+      name: "Balance (💎)",
+      selector: (row) => `💎${Number(row.balance).toFixed(2)}`,
       sortable: true,
     },
     {
@@ -214,7 +214,7 @@ const User = () => {
                   <strong>Phone:</strong> {selectedUser.phone}
                 </p>
                 <p>
-                  <strong>Current Balance:</strong> ₹
+                  <strong>Current Balance:</strong> 💎
                   {Number(selectedUser.balance).toFixed(2)}
                 </p>
               </div>
@@ -222,7 +222,7 @@ const User = () => {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount (₹)
+                Amount (💎)
               </label>
               <input
                 type="number"

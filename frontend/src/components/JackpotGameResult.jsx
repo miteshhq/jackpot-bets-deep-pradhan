@@ -16,7 +16,7 @@ const JackpotGameResult = () => {
     const [hours, minutes] = time24.split(":");
     const hour24 = parseInt(hours, 10);
     const hour12 = hour24 % 12 || 12;
-    const ampm = hour24 >= 12 ? "pm" : "am";
+    const ampm = hour24 >= 12 ? "PM" : "AM";
     return `${hour12}:${minutes} ${ampm}`;
   };
 
@@ -58,6 +58,9 @@ const JackpotGameResult = () => {
 
   return (
     <div className="relative w-full bg-white p-4 md:p-5 rounded-xl shadow-md">
+      <div className="bg-gradient-to-b from-red-600 to-red-800 rounded-lg p-4 w-full text-3xl font-bold text-white uppercase mb-4 text-center">
+        Jackpot Results
+      </div>
       {/* Mobile View - Horizontal Scroll */}
       <div
         ref={mobileScrollRef}
@@ -66,7 +69,7 @@ const JackpotGameResult = () => {
         {resultTimes.map(({ time, number, bonus }, idx) => (
           <div
             key={idx}
-            className="flex-shrink-0 w-[80px] relative flex flex-col items-center justify-center border border-gray-300 rounded-lg bg-gradient-to-br from-white to-gray-100 p-2 shadow"
+            className="flex-shrink-0 w-[60px] relative flex flex-col items-center justify-center border border-gray-300 rounded-lg bg-gradient-to-br from-white to-gray-100 p-2 shadow"
           >
             {bonus && bonus > 1 && (
               <span className="absolute top-1 right-1 bg-yellow-400 text-[10px] font-bold text-gray-800 px-1.5 py-0.5 rounded-full shadow">

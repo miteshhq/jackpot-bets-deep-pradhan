@@ -92,104 +92,141 @@ const JackpotHeader = () => {
     }
   };
 
+  // Simple timer color
+  const getTimerColor = () => {
+    if (timeLeft <= 30) return "text-red-600";
+    if (timeLeft <= 60) return "text-orange-600";
+    return "text-green-600";
+  };
+
   return (
     <>
-      <div className="bg-gradient-to-b from-blue-300 to-blue-500 text-black font-semibold text-sm px-2 md:px-4">
+      <div className="bg-gradient-to-b from-blue-300 to-blue-500 text-black font-medium px-3 py-2">
         {/* Mobile Layout */}
-        <div className="flex md:hidden flex-col ">
-          <div className="flex justify-center items-center">
+        <div className="flex md:hidden flex-col space-y-3">
+          {/* Logo and Agent */}
+          <div className="flex justify-between items-center">
             <img
               src={jackpotLogo}
               alt="Jackpot"
-              className="object-contain flex-1 "
+              className="h-12 object-contain"
               style={{
-                height: "60px",
-                width: "auto",
                 filter:
                   "brightness(0) saturate(100%) invert(21%) sepia(99%) saturate(7481%) hue-rotate(1deg) brightness(101%) contrast(126%)",
               }}
             />
-            <span className="font-semibold whitespace-nowrap">
-              Agent: {user?.id || "N/A"}
-            </span>
+            <div className="text-right flex items-center gap-2 bg-blue-50 rounded-lg p-1 px-2">
+              <div className="text-xs">Agent:</div>
+              <div className="text-lg font-bold">{user?.id || "N/A"}</div>
+            </div>
           </div>
 
-          {/* Evenly spaced row */}
-          <div className="grid grid-cols-4  w-full items-center text-[11px] px-1 text-center">
-            <p className="font-semibold whitespace-nowrap">
-              Time Left : {formatTime(timeLeft)}
-            </p>
-            <p className="font-semibold whitespace-nowrap">
-              {new Date().toLocaleTimeString()}
-            </p>
-            <p className="font-semibold whitespace-nowrap">
-              ₹{Number(balance).toFixed(2)}
-            </p>
-            <div className="flex flex-col w-full  ">
+          {/* Main Info Row */}
+          <div className="grid grid-cols-4 gap-2 text-center">
+            {/* Timer - Most Important */}
+            <div className="col-span-2 bg-white/90 rounded-lg p-2">
+              <div className="text-xs text-gray-600">Time Left</div>
+              <div className={`text-xl font-bold ${getTimerColor()}`}>
+                {formatTime(timeLeft)}
+              </div>
+            </div>
+
+            {/* Balance */}
+            <div className="bg-yellow-100 rounded-lg p-2">
+              <div className="text-xs text-gray-600">Balance</div>
+              <div className="text-sm font-bold text-green-700">
+                💎{Number(balance).toFixed(2)}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-1">
               <button
                 onClick={() => setShowModal(true)}
-                className="bg-green-500 hover:bg-green-600 text-white px-2  py-0.5 rounded text-[10px]"
+                className="bg-green-500 text-white px-2 py-1 rounded text-xs font-medium"
               >
                 Deposit
               </button>
               <button
                 onClick={() => setShowPayoutModal(true)}
-                className="bg-pink-500 hover:bg-pink-600 text-white  px-2 py-0.5 rounded text-[10px]"
+                className="bg-pink-500 text-white px-2 py-1 rounded text-xs font-medium"
               >
                 Withdraw
               </button>
             </div>
           </div>
+
+          {/* Time */}
+          <div className="text-center text-sm">
+            {new Date().toLocaleTimeString()}
+          </div>
         </div>
 
         {/* Desktop Layout */}
-        <div className="hidden md:flex flex-row items-center justify-between">
-          <div className="flex items-center space-x-1">
-            <span className="text-black font-bold">Time Left :</span>
-            <span className="text-black text-lg font-mono">
+        <div className="hidden md:flex items-center justify-between">
+          {/* Timer */}
+          <div className="bg-white/90 p-3 rounded-lg">
+            <span className="text-sm mr-2">Time Left:</span>
+            <span className={`text-2xl font-bold ${getTimerColor()}`}>
               {formatTime(timeLeft)}
             </span>
           </div>
+
+          {/* Logo */}
           <img
             src={jackpotLogo}
             alt="Jackpot"
-            className="h-10 md:h-14 object-contain scale-300 max-h-14"
+            className="h-24 object-contain"
             style={{
               filter:
                 "brightness(0) saturate(100%) invert(21%) sepia(99%) saturate(7481%) hue-rotate(1deg) brightness(101%) contrast(126%)",
             }}
           />
-          <div className="flex flex-col md:flex-row items-center md:space-x-6 space-y-1 md:space-y-0 text-xs md:text-sm">
-            <span>
-              Agent ID : <span className="font-bold">{user?.id || "N/A"}</span>
-            </span>
-            <span className="font-bold text-black text-base md:text-lg">
+
+          {/* Right Section */}
+          <div className="flex items-center space-x-6">
+            {/* Agent ID */}
+            <div className="text-right flex items-center gap-2 bg-blue-50 rounded-lg p-2 px-4">
+              <div className="text-sm">Agent ID:</div>
+              <div className="text-lg font-bold">{user?.id || "N/A"}</div>
+            </div>
+
+            {/* Time */}
+            <div className="text-lg font-medium">
               {new Date().toLocaleTimeString()}
-            </span>
-            <div className="hidden md:flex items-center">
-              <label htmlFor="drTime" className="mr-1">
-                Dr. Time :
+            </div>
+
+            {/* Dr. Time */}
+            <div className="flex items-center">
+              <label htmlFor="drTime" className="mr-2 text-sm">
+                Dr. Time:
               </label>
               <select
                 id="drTime"
-                className="text-sm px-1 py-0.5 border rounded"
+                className="text-sm px-2 py-1 border rounded bg-white"
               >
                 <option value="">--</option>
               </select>
             </div>
-            <div className="flex items-center space-x-2 border-l border-black pl-4">
-              <span className="font-bold text-black">
-                Balance: ₹{Number(balance).toFixed(2)}
-              </span>
+
+            {/* Balance & Actions */}
+            <div className="flex items-center space-x-4 bg-white/90 rounded-lg p-3">
+              <div className="text-right">
+                <div className="text-sm">Balance</div>
+                <div className="text-lg font-bold text-green-700">
+                  💎{Number(balance).toFixed(2)}
+                </div>
+              </div>
+
               <button
                 onClick={() => setShowModal(true)}
-                className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1 rounded"
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium"
               >
                 Deposit
               </button>
               <button
                 onClick={() => setShowPayoutModal(true)}
-                className="bg-pink-500 hover:bg-pink-600 text-white text-xs px-3 py-1 rounded"
+                className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded font-medium"
               >
                 Withdraw
               </button>
@@ -198,20 +235,21 @@ const JackpotHeader = () => {
         </div>
       </div>
 
-      {/* Deposit Request Modal */}
+      {/* Simple Deposit Modal */}
       {showModal && (
-        <div className="fixed z-50 inset-0 flex justify-center items-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-purple-300 relative">
-            <h2 className="text-2xl font-bold text-center mb-6 text-purple-600">
+        <div className="fixed z-50 inset-0 flex justify-center items-center bg-black/60 p-4">
+          <div className="bg-white rounded-xl p-6 w-[90%] max-w-md">
+            <h2 className="text-xl font-bold text-center mb-4">
               💸 Request Deposit
             </h2>
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">
-                📱 <strong>Process:</strong> Admin will contact you on WhatsApp
-                for UPI payment after you submit this request.
+                📱 Admin will contact you on WhatsApp for UPI payment.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3 mb-5">
+
+            <div className="grid grid-cols-3 gap-2 mb-4">
               {[10, 50, 100, 500, 1000, 2000, 5000].map((amt) => (
                 <button
                   key={amt}
@@ -219,31 +257,32 @@ const JackpotHeader = () => {
                     setSelectedAmount(amt);
                     setCustomAmount("");
                   }}
-                  className={`rounded-full py-2 text-sm font-semibold transition-all duration-200 shadow-sm hover:scale-105
-                  ${
+                  className={`py-2 text-sm font-medium rounded ${
                     selectedAmount === amt
-                      ? "bg-gradient-to-r from-green-400 to-green-600 text-white ring-2 ring-green-500"
-                      : "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white hover:ring-2 hover:ring-indigo-300"
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   }`}
                 >
-                  ₹{amt}
+                  💎{amt}
                 </button>
               ))}
             </div>
+
             <input
-              type="number"
-              placeholder="Or enter custom amount"
-              className="w-full px-4 py-2 text-center text-sm border rounded-lg mb-5 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              type="tel"
+              placeholder="Custom amount"
+              className="w-full px-3 py-2 border rounded mb-4 text-center"
               value={customAmount}
               onChange={(e) => {
                 setCustomAmount(e.target.value);
                 setSelectedAmount(null);
               }}
             />
-            <div className="flex justify-between items-center">
+
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
+                className="flex-1 bg-gray-500 text-white py-2 rounded"
               >
                 Cancel
               </button>
@@ -251,18 +290,19 @@ const JackpotHeader = () => {
                 onClick={() =>
                   handleDepositRequest(selectedAmount || customAmount)
                 }
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+                className="flex-1 bg-green-500 text-white py-2 rounded"
               >
-                Submit Request
+                Submit
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Simple Welcome Alert */}
       {showWelcomeAlert && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          🎉 ₹20 Welcome Bonus added to your wallet!
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded z-50">
+          🎉 💎20 Welcome Bonus added!
         </div>
       )}
 

@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 const AdminManualResultSetterWithSummary = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-  const [number, setNumber] = useState('');
+  const [number, setNumber] = useState("");
   const [bonus, setBonus] = useState(1);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState("");
   const [error, setError] = useState(false);
 
   const [betsSummary, setBetsSummary] = useState({});
@@ -14,6 +14,18 @@ const AdminManualResultSetterWithSummary = () => {
 
   const [betsHistory, setBetsHistory] = useState([]); // ✅ last 10 rounds
   const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // ✅ Helper function to convert 24-hour to 12-hour format
+  const formatTo12Hour = (time24) => {
+    if (!time24) return "";
+
+    const [hours, minutes] = time24.split(":");
+    const hour24 = parseInt(hours, 10);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const ampm = hour24 >= 12 ? "PM" : "AM";
+
+    return `${hour12}:${minutes} ${ampm}`;
+  };
 
   // Fetch bet summary initially and every 5 seconds
   useEffect(() => {
@@ -23,7 +35,7 @@ const AdminManualResultSetterWithSummary = () => {
         setBetsSummary(res.data || {});
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching bets summary:', err);
+        console.error("Error fetching bets summary:", err);
         setLoading(false);
       }
     };
@@ -35,7 +47,7 @@ const AdminManualResultSetterWithSummary = () => {
         setBetsHistory(res.data.rounds || []);
         setLoadingHistory(false);
       } catch (err) {
-        console.error('Error fetching bets history:', err);
+        console.error("Error fetching bets history:", err);
         setLoadingHistory(false);
       }
     };
@@ -59,54 +71,61 @@ const AdminManualResultSetterWithSummary = () => {
   const totalAmount = values.reduce((acc, v) => acc + v, 0);
 
   const submitManualResult = async () => {
-    setMsg('');
+    setMsg("");
     setError(false);
 
     const num = parseInt(number, 10);
     const bon = parseInt(bonus, 10);
 
     if (isNaN(num) || num < 0 || num > 99) {
-      setMsg('❌ Result number must be between 0 and 99');
+      setMsg("❌ Result number must be between 0 and 99");
       setError(true);
       return;
     }
 
     if (isNaN(bon) || bon < 1 || bon > 99) {
-      setMsg('❌ Bonus multiplier must be between 1 and 99');
+      setMsg("❌ Bonus multiplier must be between 1 and 99");
       setError(true);
       return;
     }
 
     try {
+      console.log(`🎯 Submitting manual result: ${num} with ${bon}x bonus`);
+
       const res = await fetch(`${BACKEND_URL}/api/results/set-manual-result`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ number: num, bonus: bon }),
       });
+
       const data = await res.json();
+      console.log("📥 Server response:", data);
+
       if (res.ok) {
-        setMsg(data.msg || '✅ Result submitted successfully');
+        setMsg(`✅ Result set: ${num} with ${bon}x bonus - ${data.msg}`);
         setError(false);
+        // Keep the values visible for confirmation
       } else {
-        setMsg(data.msg || '❌ Failed to submit result');
+        setMsg(data.msg || "❌ Failed to submit result");
         setError(true);
       }
     } catch (e) {
-      setMsg('❌ Server error while submitting result');
+      console.error("❌ Error submitting result:", e);
+      setMsg("❌ Server error while submitting result");
       setError(true);
     }
   };
 
   const handleNumberChange = (e) => {
     const val = e.target.value;
-    if (val === '' || (/^\d{1,2}$/.test(val) && parseInt(val, 10) <= 99)) {
+    if (val === "" || (/^\d{1,2}$/.test(val) && parseInt(val, 10) <= 99)) {
       setNumber(val);
     }
   };
 
   const handleBonusChange = (e) => {
     const val = e.target.value;
-    if (val === '' || (/^\d{1,2}$/.test(val) && parseInt(val, 10) <= 99)) {
+    if (val === "" || (/^\d{1,2}$/.test(val) && parseInt(val, 10) <= 99)) {
       setBonus(val);
     }
   };
@@ -115,10 +134,14 @@ const AdminManualResultSetterWithSummary = () => {
     <div className="p-4 space-y-6 max-w-7xl mx-auto">
       {/* Manual Result Setter */}
       <div className="max-w-lg mx-auto p-4 sm:p-6 bg-white rounded-xl shadow-md">
-        <h3 className="text-2xl font-bold text-blue-700 mb-4 text-center">🛠️ Set the Result</h3>
+        <h3 className="text-2xl font-bold text-blue-700 mb-4 text-center">
+          🛠️ Set the Result
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block mb-1 text-sm font-medium">Result Number</label>
+            <label className="block mb-1 text-sm font-medium">
+              Result Number
+            </label>
             <input
               type="number"
               min="0"
@@ -130,7 +153,9 @@ const AdminManualResultSetterWithSummary = () => {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm font-medium">Bonus Multiplier</label>
+            <label className="block mb-1 text-sm font-medium">
+              Bonus Multiplier
+            </label>
             <input
               type="number"
               min="1"
@@ -149,7 +174,11 @@ const AdminManualResultSetterWithSummary = () => {
           🚀 Submit
         </button>
         {msg && (
-          <p className={`mt-4 text-center ${error ? 'text-red-600' : 'text-green-600'}`}>
+          <p
+            className={`mt-4 text-center ${
+              error ? "text-red-600" : "text-green-600"
+            }`}
+          >
             {msg}
           </p>
         )}
@@ -163,7 +192,8 @@ const AdminManualResultSetterWithSummary = () => {
 
         {/* ✅ Total Amount Section */}
         <p className="text-center text-lg font-bold mb-4">
-          💰 Total Bet Amount: <span className="text-blue-700">{(totalAmount * 2).toFixed(2)}</span>
+          💰 Total Bet Amount:{" "}
+          <span className="text-blue-700">{(totalAmount * 2).toFixed(2)}</span>
         </p>
 
         {loading ? (
@@ -176,17 +206,17 @@ const AdminManualResultSetterWithSummary = () => {
               const isMin = val === minVal && val > 0;
               const hasAmount = val > 0;
 
-              let bgColor = 'bg-gray-100';
-              if (hasAmount) bgColor = 'bg-yellow-200';
-              if (isMin) bgColor = 'bg-green-300';
-              if (isMax) bgColor = 'bg-red-300';
+              let bgColor = "bg-gray-100";
+              if (hasAmount) bgColor = "bg-yellow-200";
+              if (isMin) bgColor = "bg-green-300";
+              if (isMax) bgColor = "bg-red-300";
 
               return (
                 <div
                   key={i}
                   className={`border rounded p-2 text-center text-sm sm:text-base ${bgColor}`}
                 >
-                  <div className="font-bold">{String(i).padStart(2, '0')}</div>
+                  <div className="font-bold">{String(i).padStart(2, "0")}</div>
                   <div>{val}</div>
                 </div>
               );
@@ -195,7 +225,7 @@ const AdminManualResultSetterWithSummary = () => {
         )}
       </div>
 
-      {/* ✅ Bets History (Last 10 rounds) */}
+      {/* ✅ Bets History (Last 10 rounds) with 12-hour format */}
       <div className="max-w-3xl mx-auto mt-6">
         <h4 className="text-lg font-semibold mb-2 text-center">
           📜 Last 10 Rounds Total Bets
@@ -211,14 +241,20 @@ const AdminManualResultSetterWithSummary = () => {
               <tr>
                 <th className="px-4 py-2 border">Round Time</th>
                 <th className="px-4 py-2 border">Total Bet Amount</th>
+                <th className="px-4 py-2 border">Avg Bonus</th>
               </tr>
             </thead>
             <tbody>
               {betsHistory.map((row, idx) => (
                 <tr key={idx} className="hover:bg-gray-100">
-                  <td className="px-4 py-2 border">{row.roundTime}</td>
+                  <td className="px-4 py-2 border">
+                    {formatTo12Hour(row.roundTime)}
+                  </td>
                   <td className="px-4 py-2 border font-semibold text-blue-700">
-                    {row.totalStake*2}
+                    {(row.totalStake * 2).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-2 border text-purple-600">
+                    {row.avgBonus}x
                   </td>
                 </tr>
               ))}

@@ -1,4 +1,4 @@
-// 📁 config/db.js (Updated with new wallet system tables and enum)
+// 📁 config/db.js (Updated with claimed column and bonus column support)
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -41,7 +41,7 @@ const pool = mysql.createPool({
     queueLimit: 0,
 });
 
-// ✅ Create all required tables (Updated with new wallet system)
+// ✅ Create all required tables (Updated with claimed and bonus columns)
 export const createTables = async () => {
     try {
         console.log('🔄 Creating tables for manual wallet system...');
@@ -60,7 +60,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 2. Bets table (betController.js)
+        // 2. Bets table (betController.js) - Updated with bonus and claimed columns
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS bets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -79,6 +79,44 @@ export const createTables = async () => {
                 INDEX idx_user_id (user_id)
             )
         `);
+
+        // ✅ Check and add bonus column to bets table if it doesn't exist
+        try {
+            const [bonusColumns] = await pool.execute(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'bets' AND COLUMN_NAME = 'bonus'
+            `, [process.env.DB_NAME || 'jackpot']);
+
+            if (bonusColumns.length === 0) {
+                await pool.execute(`
+                    ALTER TABLE bets 
+                    ADD COLUMN bonus DECIMAL(4,2) DEFAULT 1.00 AFTER status
+                `);
+                console.log('✅ Added bonus column to bets table');
+            }
+        } catch (bonusError) {
+            console.log('ℹ️ Bonus column might already exist or error adding it:', bonusError.message);
+        }
+
+        // ✅ Check and add claimed column to bets table if it doesn't exist
+        try {
+            const [claimedColumns] = await pool.execute(`
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'bets' AND COLUMN_NAME = 'claimed'
+            `, [process.env.DB_NAME || 'jackpot']);
+
+            if (claimedColumns.length === 0) {
+                await pool.execute(`
+                    ALTER TABLE bets 
+                    ADD COLUMN claimed ENUM('claimed', 'unclaimed') DEFAULT 'unclaimed' AFTER bonus
+                `);
+                console.log('✅ Added claimed column to bets table');
+            }
+        } catch (claimedError) {
+            console.log('ℹ️ Claimed column might already exist or error adding it:', claimedError.message);
+        }
 
         // 3. Results table (resultController.js)
         await pool.execute(`
@@ -233,7 +271,7 @@ export const createTables = async () => {
         // ✅ Log table creation summary
         console.log('📊 Created/Updated tables:');
         console.log('   - users (authentication)');
-        console.log('   - bets (betting system)');
+        console.log('   - bets (betting system with bonus and claimed columns)');
         console.log('   - results (game results)');
         console.log('   - withdrawals (legacy payout requests)');
         console.log('   - transactions (payment history - updated type enum)');
@@ -241,6 +279,17 @@ export const createTables = async () => {
         console.log('   - withdrawal_requests (NEW - manual withdrawal system)');
         console.log('   - referrals (referral codes)');
         console.log('   - referral_rewards (referral bonuses)');
+
+        // ✅ Verify the bets table structure
+        try {
+            const [betsStructure] = await pool.execute(`DESCRIBE bets`);
+            console.log('📋 Bets table structure:');
+            betsStructure.forEach(column => {
+                console.log(`   - ${column.Field}: ${column.Type} ${column.Default ? `(default: ${column.Default})` : ''}`);
+            });
+        } catch (describeError) {
+            console.log('ℹ️ Could not describe bets table structure');
+        }
 
     } catch (error) {
         console.error('❌ Error creating tables:', error);

@@ -58,7 +58,7 @@ export const sendUserOTP = async (req, res) => {
     }
 };
 
-// ✅ Verify OTP and Register New User with ₹20 balance + referral reward
+// ✅ Verify OTP and Register New User with 💎20 balance + referral reward
 export const verifyUserOTP = async (req, res) => {
     const { phone, otp, password, referralCode } = req.body;
 
@@ -77,7 +77,7 @@ export const verifyUserOTP = async (req, res) => {
         return res.status(409).json({ message: 'User already exists. Please login.' });
     }
 
-    // Hash password & insert new user with ₹20 balance
+    // Hash password & insert new user with 💎20 balance
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
         'INSERT INTO users (phone, password, balance) VALUES (?, ?, ?)',

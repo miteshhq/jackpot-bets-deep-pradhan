@@ -38,7 +38,10 @@ const Bets = () => {
           String(item.stake).includes(lowercasedFilter) ||
           item.status?.toLowerCase().includes(lowercasedFilter) ||
           item.roundTime?.toLowerCase().includes(lowercasedFilter) ||
-          new Date(item.placedAt).toLocaleString().toLowerCase().includes(lowercasedFilter)
+          new Date(item.placedAt)
+            .toLocaleString()
+            .toLowerCase()
+            .includes(lowercasedFilter)
         );
       });
       setFilteredBets(filteredData);
@@ -50,7 +53,11 @@ const Bets = () => {
     { name: "Number", selector: (row) => row.number, sortable: true },
 
     // Show stake * 2 as amount
-    { name: "Stake", selector: (row) => `₹${row.amount ?? row.stake * 2}`, sortable: true },
+    {
+      name: "Stake",
+      selector: (row) => `💎${row.amount ?? row.stake * 2}`,
+      sortable: true,
+    },
 
     { name: "Round Time", selector: (row) => row.roundTime, sortable: true },
     {
@@ -109,8 +116,14 @@ const Bets = () => {
           highlightOnHover
           striped
           responsive
-          noDataComponent={<div className="text-gray-500 text-sm py-4">No matching bets found.</div>}
-          progressComponent={<div className="text-blue-500 text-sm py-4">Loading bets...</div>}
+          noDataComponent={
+            <div className="text-gray-500 text-sm py-4">
+              No matching bets found.
+            </div>
+          }
+          progressComponent={
+            <div className="text-blue-500 text-sm py-4">Loading bets...</div>
+          }
         />
       </div>
     </div>
@@ -118,8 +131,3 @@ const Bets = () => {
 };
 
 export default Bets;
-
-
-
-
-

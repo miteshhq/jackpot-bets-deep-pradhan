@@ -166,7 +166,7 @@ const Withdraw = ({ user, BACKEND_URL, onClose, onSuccess, userBalance }) => {
         ) : (
           <div>
             <p className="text-gray-600 text-sm mb-2">
-              Available Balance: ₹{Number(userBalance).toFixed(2)}
+              Available Balance: 💎{Number(userBalance).toFixed(2)}
             </p>
             <input
               className="w-full px-4 py-2 mb-5 border rounded-lg text-center"

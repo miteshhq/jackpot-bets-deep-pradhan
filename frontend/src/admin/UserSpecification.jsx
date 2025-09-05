@@ -13,7 +13,9 @@ const UserSpecification = () => {
   useEffect(() => {
     const fetchProfitLoss = async () => {
       try {
-        const res = await axios.get(`${BACKEND_URL}/api/bets/daily-profit-loss`);
+        const res = await axios.get(
+          `${BACKEND_URL}/api/bets/daily-profit-loss`
+        );
         console.log("API response data:", res.data);
 
         if (Array.isArray(res.data)) {
@@ -62,21 +64,21 @@ const UserSpecification = () => {
       width: "150px",
     },
     {
-      name: "Total Stake (₹)",
+      name: "Total Stake (💎)",
       selector: (row) => row.totalStake ?? 0,
       sortable: true,
       right: true,
       format: (row) => row.totalStake?.toLocaleString() ?? "0",
     },
     {
-      name: "Total Payout (₹)",
+      name: "Total Payout (💎)",
       selector: (row) => row.totalPayout ?? 0,
       sortable: true,
       right: true,
       format: (row) => row.totalPayout?.toLocaleString() ?? "0",
     },
     {
-      name: "Profit / Loss (₹)",
+      name: "Profit / Loss (💎)",
       selector: (row) => (row.totalStake || 0) - (row.totalPayout || 0),
       sortable: true,
       right: true,
@@ -102,7 +104,9 @@ const UserSpecification = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-center">Daily Profit & Loss</h1>
+      <h1 className="text-2xl font-bold mb-6 text-center">
+        Daily Profit & Loss
+      </h1>
 
       {loading && <p className="text-center text-blue-600">Loading data...</p>}
       {error && <p className="text-center text-red-600">{error}</p>}
@@ -133,5 +137,3 @@ const UserSpecification = () => {
 };
 
 export default UserSpecification;
-
-
