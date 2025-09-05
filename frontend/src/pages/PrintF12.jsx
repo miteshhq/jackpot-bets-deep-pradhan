@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 // Receipt Component
 const Receipt = ({ receiptData }) => {
@@ -16,6 +17,7 @@ const Receipt = ({ receiptData }) => {
       </div>
       <div>Counter ID : {receiptData.counterID}</div>
       <div>Barcode : {receiptData.barcode}</div>
+      <div>Agent ID : {receiptData.agentID}</div>
       <div>
         2 DIGIT 2 Draw {receiptData.drawDate} {receiptData.drawTime}
       </div>
@@ -66,6 +68,18 @@ const PrintF12 = () => {
       providedBarcode ||
       (5100000 + Math.floor(Math.random() * 10000)).toString();
 
+    // Get Agent ID from JWT token (same as in header)
+    const token = localStorage.getItem("token");
+    let agentID = "N/A";
+    if (token) {
+      try {
+        const user = jwtDecode(token);
+        agentID = user?.id || "N/A";
+      } catch (e) {
+        console.error("Error decoding token:", e);
+      }
+    }
+
     const now = new Date();
     const drawDate = now.toISOString().split("T")[0];
     const drawTime = now.toLocaleTimeString([], {
@@ -82,6 +96,7 @@ const PrintF12 = () => {
     setReceiptData({
       counterID,
       barcode,
+      agentID,
       drawDate,
       drawTime,
       bets: selectedBets,
