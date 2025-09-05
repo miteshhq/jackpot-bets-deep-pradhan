@@ -10,7 +10,7 @@ import {
   getUserCount,
   sendResetPasswordOTP,
   verifyResetPasswordOTP,
-
+    deleteUserByAdmin
 } from '../controllers/authController.js';
 
 const router = express.Router();
@@ -28,11 +28,7 @@ router.get('/admin/user-count', verifyToken, getUserCount);
 router.post('/send-reset-otp', sendResetPasswordOTP);
 router.post('/verify-reset-otp', verifyResetPasswordOTP);
 
+// Add this to your existing routes
+router.delete('/admin/users/:id', verifyToken, deleteUserByAdmin);
+
 export default router;
-
-
-
-
-
-
-

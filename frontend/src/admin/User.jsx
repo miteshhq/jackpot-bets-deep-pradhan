@@ -34,6 +34,26 @@ const User = () => {
     }
   };
 
+  const handleDeleteUser = async (userId, phone) => {
+    const confirmMessage = `Are you sure you want to delete user ${phone} (ID: ${userId})?\n\nThis will permanently delete:\n- User account\n- All bets\n- All transactions\n- All withdrawal/deposit requests\n- All referral data\n\nThis action cannot be undone!`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${BACKEND_URL}/api/auth/admin/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("✅ User deleted successfully");
+      fetchUsers(); // Refresh user list
+    } catch (err) {
+      alert(
+        "❌ Failed to delete user: " +
+          (err.response?.data?.message || err.message)
+      );
+    }
+  };
+
   const handleCoinOperation = async () => {
     if (!selectedUser || !amount || Number(amount) <= 0) {
       alert("Please enter a valid amount");
@@ -125,6 +145,21 @@ const User = () => {
       allowOverflow: true,
       button: true,
     },
+    {
+      name: "Delete",
+      cell: (row) => (
+        <button
+          onClick={() => handleDeleteUser(row.id, row.phone)}
+          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+          title="Delete User"
+        >
+          🗑 Delete
+        </button>
+      ),
+      ignoreRowClick: true,
+      allowOverflow: true,
+      button: true,
+    },
   ];
 
   if (loading) return <p>Loading users...</p>;
@@ -135,7 +170,7 @@ const User = () => {
       <div style={{ padding: "20px" }}>
         <h2>👥 All Registered Users</h2>
         <p className="text-sm text-gray-600 mb-4">
-          Admin can manually add or remove coins from user wallets
+          Admin can manually add/remove coins and delete users
         </p>
 
         <input

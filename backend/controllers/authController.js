@@ -266,3 +266,67 @@ export const getAdminInfo = (req, res) => {
         isAdmin: true
     });
 };
+
+// ✅ Admin: Delete User by ID (Fixed for mysql2 transaction handling)
+export const deleteUserByAdmin = async (req, res) => {
+    if (!req.user?.admin) return res.status(403).json({ message: 'Access denied' });
+
+    const userId = req.params.id;
+    let connection;
+
+    try {
+        // Get connection from pool for transaction
+        connection = await db.getConnection();
+
+        // Begin transaction
+        await connection.beginTransaction();
+
+        // Check if user exists
+        const [users] = await connection.query('SELECT * FROM users WHERE id = ?', [userId]);
+        if (users.length === 0) {
+            await connection.rollback();
+            connection.release();
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const userToDelete = users[0];
+
+        // Delete related records first (to avoid foreign key constraints)
+        await connection.query('DELETE FROM referral_rewards WHERE referrer_id = ? OR referred_user_id = ?', [userId, userId]);
+        await connection.query('DELETE FROM referrals WHERE user_id = ?', [userId]);
+        await connection.query('DELETE FROM bets WHERE user_id = ?', [userId]);
+        await connection.query('DELETE FROM transactions WHERE user_id = ?', [userId]);
+        await connection.query('DELETE FROM withdrawal_requests WHERE user_id = ?', [userId]);
+        await connection.query('DELETE FROM deposit_requests WHERE user_id = ?', [userId]);
+        await connection.query('DELETE FROM withdrawals WHERE user_id = ?', [userId]);
+
+        // Finally delete the user
+        await connection.query('DELETE FROM users WHERE id = ?', [userId]);
+
+        // Commit transaction
+        await connection.commit();
+        connection.release();
+
+        res.json({
+            message: 'User deleted successfully',
+            deletedUser: {
+                id: userToDelete.id,
+                phone: userToDelete.phone
+            }
+        });
+
+    } catch (err) {
+        // Rollback on error
+        if (connection) {
+            try {
+                await connection.rollback();
+                connection.release();
+            } catch (rollbackError) {
+                console.error('Rollback error:', rollbackError);
+            }
+        }
+
+        console.error('Error deleting user:', err);
+        res.status(500).json({ message: 'Server error deleting user', error: err.message });
+    }
+};
