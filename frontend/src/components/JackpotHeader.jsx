@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import jackpotLogo from "../assets/Jkpt1.png";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { io } from "socket.io-client";
@@ -101,135 +100,154 @@ const JackpotHeader = () => {
 
   return (
     <>
-      <div className="bg-gradient-to-b from-blue-300 to-blue-500 text-black font-medium px-3 py-2">
+      <div className="bg-gradient-to-b from-blue-300 to-blue-500 text-black font-medium px-3 py-3">
         {/* Mobile Layout */}
-        <div className="flex md:hidden flex-col space-y-3">
-          {/* Logo and Agent */}
-          <div className="flex justify-between items-center">
-            <img
-              src={jackpotLogo}
-              alt="Jackpot"
-              className="h-12 object-contain"
-              style={{
-                filter:
-                  "brightness(0) saturate(100%) invert(21%) sepia(99%) saturate(7481%) hue-rotate(1deg) brightness(101%) contrast(126%)",
-              }}
-            />
-            <div className="text-right flex items-center gap-2 bg-blue-50 rounded-lg p-1 px-2">
-              <div className="text-xs">Agent:</div>
-              <div className="text-lg font-bold">{user?.id || "N/A"}</div>
-            </div>
+        <div className="flex md:hidden flex-col space-y-4">
+          {/* Centered Jackpot Title */}
+          <div className="text-center">
+            <h1 className="text-5xl sm:text-6xl font-bold text-red-600 drop-shadow-lg tracking-wider">
+              JACKPOT
+            </h1>
           </div>
 
-          {/* Main Info Row */}
-          <div className="grid grid-cols-4 gap-2 text-center">
-            {/* Timer - Most Important */}
-            <div className="col-span-2 bg-white/90 rounded-lg p-2">
-              <div className="text-xs text-gray-600">Time Left</div>
-              <div className={`text-xl font-bold ${getTimerColor()}`}>
-                {formatTime(timeLeft)}
+          {/* Agent and Current Time Row */}
+          <div className="flex justify-between items-center">
+            <div className="text-left flex items-center gap-2 bg-blue-50 rounded-lg p-2 px-3">
+              <div className="text-sm font-medium">Agent:</div>
+              <div className="text-xl font-bold text-blue-700">
+                {user?.id || "N/A"}
               </div>
             </div>
 
+            <div className="text-right bg-white/90 rounded-lg p-2 px-3">
+              <div className="text-sm text-gray-600">Current Time</div>
+              <div className="text-lg font-bold text-blue-700">
+                {new Date().toLocaleTimeString("en-IN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Timer - Large and Prominent */}
+          <div className="bg-white/95 rounded-xl p-4 text-center shadow-lg border-4 border-yellow-400">
+            <div className="text-sm text-gray-600 mb-1">⏰ Next Draw In</div>
+            <div
+              className={`text-4xl sm:text-5xl font-black ${getTimerColor()} drop-shadow-md`}
+            >
+              {formatTime(timeLeft)}
+            </div>
+          </div>
+
+          {/* Balance and Actions Row */}
+          <div className="grid grid-cols-3 gap-3 text-center">
             {/* Balance */}
-            <div className="bg-yellow-100 rounded-lg p-2">
-              <div className="text-xs text-gray-600">Balance</div>
-              <div className="text-sm font-bold text-green-700">
+            <div className="bg-gradient-to-b from-yellow-100 to-yellow-200 rounded-lg p-3 border-2 border-yellow-300">
+              <div className="text-xs text-gray-600">💰 Balance</div>
+              <div className="text-lg font-bold text-green-700">
                 💎{Number(balance).toFixed(2)}
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-1">
-              <button
-                onClick={() => setShowModal(true)}
-                className="bg-green-500 text-white px-2 py-1 rounded text-xs font-medium"
-              >
-                Deposit
-              </button>
-              <button
-                onClick={() => setShowPayoutModal(true)}
-                className="bg-pink-500 text-white px-2 py-1 rounded text-xs font-medium"
-              >
-                Withdraw
-              </button>
-            </div>
-          </div>
+            {/* Deposit Button */}
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-gradient-to-b from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white p-3 rounded-lg font-bold text-sm shadow-lg transition-all duration-200 transform hover:scale-105"
+            >
+              💸 Deposit
+            </button>
 
-          {/* Time */}
-          <div className="text-center text-sm">
-            {new Date().toLocaleTimeString()}
+            {/* Withdraw Button */}
+            <button
+              onClick={() => setShowPayoutModal(true)}
+              className="bg-gradient-to-b from-pink-400 to-pink-600 hover:from-pink-500 hover:to-pink-700 text-white p-3 rounded-lg font-bold text-sm shadow-lg transition-all duration-200 transform hover:scale-105"
+            >
+              💰 Withdraw
+            </button>
           </div>
         </div>
 
         {/* Desktop Layout */}
         <div className="hidden md:flex items-center justify-between">
-          {/* Timer */}
-          <div className="bg-white/90 p-3 rounded-lg">
-            <span className="text-sm mr-2">Time Left:</span>
-            <span className={`text-2xl font-bold ${getTimerColor()}`}>
-              {formatTime(timeLeft)}
-            </span>
+          {/* Left Section - Timer */}
+          <div className="bg-white/95 p-4 rounded-xl shadow-lg border-4 border-yellow-400">
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-1">⏰ Next Draw In</div>
+              <div
+                className={`text-3xl font-black ${getTimerColor()} drop-shadow-md`}
+              >
+                {formatTime(timeLeft)}
+              </div>
+            </div>
           </div>
 
-          {/* Logo */}
-          <img
-            src={jackpotLogo}
-            alt="Jackpot"
-            className="h-24 object-contain"
-            style={{
-              filter:
-                "brightness(0) saturate(100%) invert(21%) sepia(99%) saturate(7481%) hue-rotate(1deg) brightness(101%) contrast(126%)",
-            }}
-          />
+          {/* Center Section - Jackpot Title */}
+          <div className="text-center flex-1">
+            <h1 className="text-6xl lg:text-7xl font-black text-red-600 drop-shadow-lg tracking-wider">
+              JACKPOT
+            </h1>
+          </div>
 
           {/* Right Section */}
           <div className="flex items-center space-x-6">
             {/* Agent ID */}
-            <div className="text-right flex items-center gap-2 bg-blue-50 rounded-lg p-2 px-4">
-              <div className="text-sm">Agent ID:</div>
-              <div className="text-lg font-bold">{user?.id || "N/A"}</div>
+            <div className="text-center flex flex-col items-center gap-1 bg-blue-50 rounded-lg p-3 px-4">
+              <div className="text-sm font-medium">Agent ID</div>
+              <div className="text-xl font-bold text-blue-700">
+                {user?.id || "N/A"}
+              </div>
             </div>
 
-            {/* Time */}
-            <div className="text-lg font-medium">
-              {new Date().toLocaleTimeString()}
+            {/* Current Time */}
+            <div className="text-center bg-white/90 rounded-lg p-3 px-4">
+              <div className="text-sm text-gray-600">Current Time</div>
+              <div className="text-xl font-bold text-blue-700">
+                {new Date().toLocaleTimeString("en-IN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </div>
             </div>
 
-            {/* Dr. Time */}
-            <div className="flex items-center">
-              <label htmlFor="drTime" className="mr-2 text-sm">
-                Dr. Time:
+            {/* Dr. Time Dropdown */}
+            <div className="flex flex-col items-center bg-white/90 rounded-lg p-3">
+              <label htmlFor="drTime" className="text-sm text-gray-600 mb-1">
+                Dr. Time
               </label>
               <select
                 id="drTime"
-                className="text-sm px-2 py-1 border rounded bg-white"
+                className="text-sm px-3 py-1 border rounded bg-white font-medium"
               >
                 <option value="">--</option>
               </select>
             </div>
 
             {/* Balance & Actions */}
-            <div className="flex items-center space-x-4 bg-white/90 rounded-lg p-3">
-              <div className="text-right">
-                <div className="text-sm">Balance</div>
-                <div className="text-lg font-bold text-green-700">
+            <div className="flex items-center space-x-4 bg-white/95 rounded-xl p-4 shadow-lg">
+              <div className="text-center">
+                <div className="text-sm text-gray-600">💰 Balance</div>
+                <div className="text-xl font-bold text-green-700">
                   💎{Number(balance).toFixed(2)}
                 </div>
               </div>
 
-              <button
-                onClick={() => setShowModal(true)}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium"
-              >
-                Deposit
-              </button>
-              <button
-                onClick={() => setShowPayoutModal(true)}
-                className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded font-medium"
-              >
-                Withdraw
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 shadow-md"
+                >
+                  💸 Deposit
+                </button>
+                <button
+                  onClick={() => setShowPayoutModal(true)}
+                  className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 shadow-md"
+                >
+                  💰 Withdraw
+                </button>
+              </div>
             </div>
           </div>
         </div>
