@@ -8,6 +8,375 @@ import io from "socket.io-client";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
+// ✅ Bet Details Modal Component
+const BetDetailsModal = ({
+  betDetails,
+  userBalance,
+  BACKEND_URL,
+  onClose,
+  onClaimSuccess,
+}) => {
+  const [bankName, setBankName] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifsc, setIfsc] = useState("");
+  const [step, setStep] = useState(1);
+
+  const BANKS = [
+    "State Bank of India",
+    "HDFC Bank",
+    "ICICI Bank",
+    "Axis Bank",
+    "Punjab National Bank",
+    "Bank of Baroda",
+    "Kotak Mahindra Bank",
+    "YES Bank",
+    "IDFC First Bank",
+    "IndusInd Bank",
+  ];
+
+  const handleBankChange = (e) => {
+    const val = e.target.value;
+    setBankName(val);
+    if (val.length >= 1) {
+      const matches = BANKS.filter((b) =>
+        b.toLowerCase().includes(val.toLowerCase())
+      );
+      setSuggestions(matches.slice(0, 5));
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const chooseBank = (name) => {
+    setBankName(name);
+    setSuggestions([]);
+  };
+
+  const calculateWinAmount = (bet) => {
+    const stake = parseFloat(bet.stake);
+    const bonus = bet.bonus ? parseFloat(bet.bonus) : 1;
+    return stake * 2 * 80 * bonus;
+  };
+
+  const formatTime = (time24) => {
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":");
+    const hour24 = parseInt(hours, 10);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const ampm = hour24 >= 12 ? "PM" : "AM";
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const handleClaim = async (bet) => {
+    const winAmount = calculateWinAmount(bet);
+    const trimmedBankName = bankName.trim();
+    const trimmedAccountNumber = accountNumber.trim();
+    const trimmedIfsc = ifsc.trim().toUpperCase();
+
+    if (!trimmedBankName) return alert("Please enter your bank name");
+    if (!/^\d{6,18}$/.test(trimmedAccountNumber))
+      return alert("Please enter a valid account number");
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(trimmedIfsc))
+      return alert("Please enter a valid IFSC code");
+
+    if (winAmount > userBalance) {
+      return alert(
+        `❌ Insufficient balance! You have ₹${Number(userBalance).toFixed(
+          2
+        )} but trying to claim ₹${winAmount.toFixed(2)}`
+      );
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const user = jwtDecode(token);
+
+      // Submit withdrawal request
+      await axios.post(
+        `${BACKEND_URL}/api/wallet/withdrawal/request`,
+        {
+          userId: user.id,
+          amount: winAmount,
+          bankName: trimmedBankName,
+          accountNumber: trimmedAccountNumber,
+          ifscCode: trimmedIfsc,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Update bet claimed status
+      await axios.post(
+        `${BACKEND_URL}/api/bets/claim-status`,
+        {
+          betId: bet.id,
+          status: "claimed",
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      alert(
+        `✅ Claim request submitted successfully for ₹${winAmount.toFixed(
+          2
+        )}! Admin will process the payout manually.`
+      );
+      onClaimSuccess();
+      onClose();
+    } catch (err) {
+      console.error("Claim request error:", err.response?.data || err.message);
+      alert(
+        err.response?.data?.message || "❌ Error while submitting claim request"
+      );
+    }
+  };
+
+  if (!betDetails || betDetails.length === 0) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+          <h2 className="text-xl font-bold text-center mb-4 text-red-600">
+            ❌ No Bet Found
+          </h2>
+          <p className="text-center mb-4">No bets found for this barcode.</p>
+          <button
+            onClick={onClose}
+            className="w-full bg-gray-500 text-white px-4 py-2 rounded-lg"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const bet = betDetails[0]; // Taking first bet for modal
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-blue-600">
+            📊 Bet Details - {bet.barcode}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Bet Summary */}
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p>
+                <strong>Draw Time:</strong> {formatTime(bet.roundTime)}
+              </p>
+              <p>
+                <strong>Date:</strong>{" "}
+                {new Date(bet.placedAt).toLocaleDateString()}
+              </p>
+              <p>
+                <strong>Total Bets:</strong> {betDetails.length}
+              </p>
+            </div>
+            <div>
+              <p>
+                <strong>Total Stake:</strong> ₹
+                {betDetails
+                  .reduce((sum, b) => sum + parseFloat(b.stake || 0), 0)
+                  .toFixed(2)}
+              </p>
+              <p>
+                <strong>Total Amount:</strong> ₹
+                {(
+                  betDetails.reduce(
+                    (sum, b) => sum + parseFloat(b.stake || 0),
+                    0
+                  ) * 2
+                ).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bet List */}
+        <div className="mb-4">
+          <h3 className="font-bold mb-2">📋 Individual Bets:</h3>
+          <div className="max-h-48 overflow-y-auto border rounded-lg">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="border p-2">Number</th>
+                  <th className="border p-2">Stake</th>
+                  <th className="border p-2">Bonus</th>
+                  <th className="border p-2">Status</th>
+                  <th className="border p-2">Win Amount</th>
+                  <th className="border p-2">Claimed</th>
+                  <th className="border p-2">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {betDetails.map((b, i) => {
+                  const bonus = b.bonus ? parseFloat(b.bonus) : 1;
+                  const winAmount =
+                    b.status === "won"
+                      ? parseFloat(b.stake) * 2 * 80 * bonus
+                      : 0;
+
+                  return (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="border p-2 text-center font-bold">
+                        {String(b.number).padStart(2, "0")}
+                      </td>
+                      <td className="border p-2 text-center">
+                        ₹{parseFloat(b.stake).toFixed(2)}
+                      </td>
+                      <td className="border p-2 text-center text-purple-600 font-bold">
+                        {bonus}x
+                      </td>
+                      <td className="border p-2 text-center">
+                        <span
+                          className={`px-2 py-1 rounded text-xs ${
+                            b.status === "won"
+                              ? "bg-green-100 text-green-800"
+                              : b.status === "lost"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {b.status}
+                        </span>
+                      </td>
+                      <td className="border p-2 text-center font-bold text-green-600">
+                        ₹{winAmount.toFixed(0)}
+                      </td>
+                      <td className="border p-2 text-center">
+                        {b.status === "won" && (
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              (b.claimed || "unclaimed") === "claimed"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-orange-100 text-orange-800"
+                            }`}
+                          >
+                            {b.claimed || "unclaimed"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="border p-2 text-center">
+                        {b.status === "won" &&
+                          (b.claimed || "unclaimed") === "unclaimed" && (
+                            <button
+                              onClick={() => setStep(2)}
+                              className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                            >
+                              🏆 Claim
+                            </button>
+                          )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Claim Form */}
+        {step === 2 && (
+          <div className="border-t pt-4">
+            <h3 className="font-bold text-green-600 mb-3">🏆 Claim Winnings</h3>
+
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                💰 <strong>Total Win Amount:</strong> ₹
+                {betDetails
+                  .filter(
+                    (b) =>
+                      b.status === "won" &&
+                      (b.claimed || "unclaimed") === "unclaimed"
+                  )
+                  .reduce((sum, b) => {
+                    const bonus = b.bonus ? parseFloat(b.bonus) : 1;
+                    return sum + parseFloat(b.stake) * 2 * 80 * bonus;
+                  }, 0)
+                  .toFixed(2)}
+              </p>
+            </div>
+
+            <div className="mb-3 relative">
+              <input
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+                placeholder="Bank Name"
+                value={bankName}
+                onChange={handleBankChange}
+              />
+              {suggestions.length > 0 && (
+                <ul className="absolute bg-white border rounded-lg w-full mt-1 max-h-40 overflow-auto z-20">
+                  {suggestions.map((b) => (
+                    <li
+                      key={b}
+                      className="px-3 py-1 hover:bg-green-100 cursor-pointer"
+                      onClick={() => chooseBank(b)}
+                    >
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <input
+              className="w-full px-4 py-2 mb-3 border rounded-lg"
+              placeholder="Account Number"
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
+            />
+            <input
+              className="w-full px-4 py-2 mb-4 border rounded-lg"
+              placeholder="IFSC Code"
+              value={ifsc}
+              onChange={(e) => setIfsc(e.target.value.toUpperCase())}
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep(1)}
+                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg"
+              >
+                ⬅ Back to Details
+              </button>
+              <button
+                onClick={() => handleClaim(bet)}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+              >
+                🚀 Submit Claim
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="bg-gray-500 text-white px-6 py-2 rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ShufflingNumber = ({ preview, isFinal }) => {
   const [display, setDisplay] = React.useState("--");
 
@@ -113,6 +482,11 @@ const JackpotGame = () => {
   const navigate = useNavigate();
   const [betNumbers, setBetNumbers] = useState(new Set());
 
+  // ✅ New states for bet details modal
+  const [betDetailsModal, setBetDetailsModal] = useState(false);
+  const [betDetailsData, setBetDetailsData] = useState(null);
+  const [barcodeInput, setBarcodeInput] = useState("");
+
   const [finalPopupCountdown, setFinalPopupCountdown] = useState(null);
   const [finalPopupPreview, setFinalPopupPreview] = useState(null);
   const [barcodeResults, setBarcodeResults] = useState([]);
@@ -145,6 +519,71 @@ const JackpotGame = () => {
   const grid = Array.from({ length: 10 }, (_, row) =>
     numbers.slice(row * 10, row * 10 + 10)
   );
+
+  // ✅ Fetch bet details when barcode is entered
+  useEffect(() => {
+    if (barcodeInput.length === 7 && /^[5]\d{6}$/.test(barcodeInput)) {
+      const fetchBetDetails = async () => {
+        try {
+          console.log("🔍 Fetching bet details for barcode:", barcodeInput);
+          const { data } = await axios.get(
+            `${BACKEND_URL}/api/bets/by-barcode/${barcodeInput}`
+          );
+
+          if (data && data.length > 0) {
+            console.log("✅ Found bet details:", data);
+            setBetDetailsData(data);
+            setBetDetailsModal(true);
+          } else {
+            console.log("❌ No bets found for barcode:", barcodeInput);
+            setBetDetailsData([]);
+            setBetDetailsModal(true);
+          }
+        } catch (err) {
+          console.error("❌ Error fetching bet details:", err);
+          setBetDetailsData([]);
+          setBetDetailsModal(true);
+        }
+      };
+
+      const timeoutId = setTimeout(fetchBetDetails, 500);
+      return () => clearTimeout(timeoutId);
+    } else if (barcodeInput.length < 7) {
+      setBetDetailsModal(false);
+      setBetDetailsData(null);
+    }
+  }, [barcodeInput, BACKEND_URL]);
+
+  // ✅ Fetch user balance
+  const fetchUserBalance = async () => {
+    if (!user) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `${BACKEND_URL}/api/wallet/get-balance/${user.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setBalance(res.data.balance);
+    } catch (err) {
+      console.error("Balance fetch error:", err);
+      setBalance(0);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserBalance();
+  }, [user]);
+
+  // ✅ Handle claim success
+  const onClaimSuccess = () => {
+    setBetDetailsModal(false);
+    setBetDetailsData(null);
+    setBarcodeInput("");
+    fetchUserBalance(); // Refresh balance
+    showMessage("✅ Claim submitted successfully!", "success");
+  };
 
   // Show confirmation message helper
   const showMessage = (message, type = "success", duration = 5000) => {
@@ -400,7 +839,7 @@ const JackpotGame = () => {
 
       <JackpotButton gridValues={gridValues} onClear={clearNumber} />
 
-      {/* Quick Info Bar with Guide Button */}
+      {/* Quick Info Bar with Barcode Input */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 text-sm flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <span>🎯 Win Rate: 1:80</span>
@@ -766,8 +1205,14 @@ const JackpotGame = () => {
             <span className="font-bold text-sm">Barcode:</span>
             <input
               type="tel"
-              value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
+              value={barcodeInput}
+              placeholder="Barcode"
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, ""); // Only digits
+                if (val.length <= 7) {
+                  setBarcodeInput(val);
+                }
+              }}
               maxLength={7}
               className="border border-gray-300 rounded px-2 py-1 text-sm w-28"
             />
@@ -785,6 +1230,21 @@ const JackpotGame = () => {
           </button>
         </div>
       </footer>
+
+      {/* ✅ Bet Details Modal */}
+      {betDetailsModal && (
+        <BetDetailsModal
+          betDetails={betDetailsData}
+          userBalance={balance}
+          BACKEND_URL={BACKEND_URL}
+          onClose={() => {
+            setBetDetailsModal(false);
+            setBetDetailsData(null);
+            setBarcodeInput("");
+          }}
+          onClaimSuccess={onClaimSuccess}
+        />
+      )}
 
       {/* Confirmation Message Component */}
       <ConfirmationMessage
