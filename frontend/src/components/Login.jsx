@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { FaPhone, FaLock } from "react-icons/fa";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
-import boyPointing from "../assets/boy-panting.png";
+import boyPointing from "../assets/Boy-panting.png";
 
 const Login = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
