@@ -105,7 +105,7 @@ const JackpotHeader = () => {
         <div className="flex md:hidden flex-col space-y-4">
           {/* Centered Jackpot Title */}
           <div className="text-center">
-            <h1 className="text-5xl sm:text-6xl font-bold text-red-600 drop-shadow-lg tracking-wider">
+            <h1 className="text-4xl font-bold text-red-600 drop-shadow-lg tracking-wider">
               JACKPOT
             </h1>
           </div>
@@ -173,10 +173,10 @@ const JackpotHeader = () => {
         <div className="hidden md:flex items-center justify-between">
           {/* Left Section - Timer */}
           <div className="bg-white/95 p-4 rounded-xl shadow-lg border-4 border-yellow-400">
-            <div className="text-center">
-              <div className="text-sm text-gray-600 mb-1">⏰ Next Draw In</div>
+            <div className="text-center flex items-center gap-2">
+              <div className="text-sm text-gray-600">⏰ Next Draw In:</div>
               <div
-                className={`text-3xl font-black ${getTimerColor()} drop-shadow-md`}
+                className={`text-2xl font-black ${getTimerColor()} drop-shadow-md`}
               >
                 {formatTime(timeLeft)}
               </div>
@@ -185,18 +185,30 @@ const JackpotHeader = () => {
 
           {/* Center Section - Jackpot Title */}
           <div className="text-center flex-1">
-            <h1 className="text-6xl lg:text-7xl font-black text-red-600 drop-shadow-lg tracking-wider">
+            <h1 className="text-5xl font-black text-red-600 tracking-tight">
               JACKPOT
             </h1>
           </div>
 
           {/* Right Section */}
           <div className="flex items-center space-x-6">
-            {/* Agent ID */}
-            <div className="text-center flex flex-col items-center gap-1 bg-blue-50 rounded-lg p-3 px-4">
-              <div className="text-sm font-medium">Agent ID</div>
-              <div className="text-xl font-bold text-blue-700">
-                {user?.id || "N/A"}
+            <div className="flex flex-col gap-1">
+              <div className="text-center flex flex-row items-center gap-1 bg-blue-50 rounded-lg px-2">
+                <div className="text-sm font-medium">Agent ID:</div>
+                <div className="text-xl font-bold text-blue-700">
+                  {user?.id || "N/A"}
+                </div>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <label htmlFor="drTime" className="text-sm text-white font-bold mb-1">
+                  Dr. Time
+                </label>
+                <select
+                  id="drTime"
+                  className="text-sm px-3 py-1 border rounded bg-white font-medium"
+                >
+                  <option value="">--</option>
+                </select>
               </div>
             </div>
 
@@ -212,19 +224,6 @@ const JackpotHeader = () => {
               </div>
             </div>
 
-            {/* Dr. Time Dropdown */}
-            <div className="flex flex-col items-center bg-white/90 rounded-lg p-3">
-              <label htmlFor="drTime" className="text-sm text-gray-600 mb-1">
-                Dr. Time
-              </label>
-              <select
-                id="drTime"
-                className="text-sm px-3 py-1 border rounded bg-white font-medium"
-              >
-                <option value="">--</option>
-              </select>
-            </div>
-
             {/* Balance & Actions */}
             <div className="flex items-center space-x-4 bg-white/95 rounded-xl p-4 shadow-lg">
               <div className="text-center">
@@ -234,7 +233,7 @@ const JackpotHeader = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-row gap-2">
                 <button
                   onClick={() => setShowModal(true)}
                   className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 shadow-md"
