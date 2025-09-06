@@ -264,14 +264,14 @@ const finalizeResult = async () => {
             }
         }
 
-
-        // Emit results
-        io.emit("final-popup", {
-            countdown: 0,
-            preview: finalNumber,
-            bonus: bonusMultiplier,
-            isResult: true,
-        });
+        setTimeout(() => {
+            io.emit("final-popup", {
+                countdown: 0,
+                preview: finalNumber,
+                bonus: bonusMultiplier,
+                isResult: true,
+            });
+        }, 500); // Small delay for dramatic effect
 
         setTimeout(() => {
             io.emit("final-popup", {
@@ -279,7 +279,7 @@ const finalizeResult = async () => {
                 preview: null,
                 isResult: true,
             });
-        }, 5000);
+        }, 7000);
 
         const resultPayload = {
             time: roundTime,

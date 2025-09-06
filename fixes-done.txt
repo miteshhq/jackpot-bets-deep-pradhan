@@ -3,8 +3,9 @@
 - fixed the deposit and withdrawals flow
 - added functionality at admin side to add or remove coins from user wallet
 - automated printing
+
 - remove yellow boxes user side - done
-- slow the sliding refer freinds get 20 - done
+- slow the sliding refer marquee - done
 - chagne rupess to diamonds - done
 - make sure number pad is used when selecting a number in the bet - mobile side. - done
 - padding fixes in mobile view - in the jackpot results section - done
@@ -17,3 +18,8 @@
 - reports - auto how much is sold and how much is withdrwan - loss profit etc all sort of business stats should be auto calculated.
 - give guide to user how to play
 - enering barcode will search for user and bet info and won price - and user can claim the amount and that amount will get deducted from his balance. - in bet details
+
+- hold result for 2 seconds
+- barcode claim in home page - done
+- put how to play in the marqee - done
+- time and jackpot bigger sizess - done

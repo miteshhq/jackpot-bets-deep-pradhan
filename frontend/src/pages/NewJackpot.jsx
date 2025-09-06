@@ -379,11 +379,15 @@ const BetDetailsModal = ({
 
 const ShufflingNumber = ({ preview, isFinal }) => {
   const [display, setDisplay] = React.useState("--");
+  const [showFinalResult, setShowFinalResult] = React.useState(false);
 
   useEffect(() => {
     console.log("🎰 ShufflingNumber: isFinal =", isFinal, "preview =", preview);
 
     if (!isFinal) {
+      // Reset final result state when not final
+      setShowFinalResult(false);
+
       const interval = setInterval(() => {
         const randomNum = Math.floor(Math.random() * 100);
         setDisplay(randomNum.toString().padStart(2, "0"));
@@ -395,20 +399,39 @@ const ShufflingNumber = ({ preview, isFinal }) => {
       };
     } else {
       console.log("✅ Displaying final number:", preview);
+      // Set final result immediately
       setDisplay(preview?.toString().padStart(2, "0") || "--");
+
+      // Show final result state after a brief delay for dramatic effect
+      setTimeout(() => {
+        setShowFinalResult(true);
+      }, 200);
     }
   }, [preview, isFinal]);
 
   return (
     <motion.div
-      key={display}
-      initial={{ scale: isFinal ? 0.6 : 1 }}
-      animate={{
-        scale: isFinal ? 1.3 : 1,
-        color: isFinal ? "#ff0000" : "#000",
+      key={`${display}-${isFinal}-${showFinalResult}`}
+      initial={{
+        scale: isFinal ? 0.8 : 1,
+        rotateY: isFinal ? 180 : 0,
       }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="text-[110px] sm:text-[140px] font-extrabold drop-shadow-lg"
+      animate={{
+        scale: isFinal ? (showFinalResult ? 1.4 : 1.1) : 1,
+        rotateY: 0,
+        color: isFinal && showFinalResult ? "#ff0000" : "#000",
+      }}
+      transition={{
+        duration: isFinal ? 0.6 : 0.3,
+        ease: "easeInOut",
+        type: showFinalResult ? "spring" : "tween",
+        bounce: showFinalResult ? 0.4 : 0,
+      }}
+      className={`text-[110px] sm:text-[140px] font-extrabold drop-shadow-lg transition-all duration-300 ${
+        isFinal && showFinalResult
+          ? "text-red-600"
+          : "text-black"
+      }`}
     >
       {display}
     </motion.div>
@@ -666,31 +689,42 @@ const JackpotGame = () => {
 
     socketRef.current.on("timer-update", (sec) => setTimeLeft(sec));
 
-    socketRef.current.on("final-popup", ({ countdown, preview, isResult }) => {
-      console.log("📩 final-popup received:", { countdown, preview, isResult });
+    socketRef.current.on(
+      "final-popup",
+      ({ countdown, preview, isResult, bonus }) => {
+        console.log("📩 final-popup received:", {
+          countdown,
+          preview,
+          isResult,
+          bonus,
+        });
 
-      if (countdown === null) {
-        console.log("🔄 New round starting - resetting popup");
-        setFinalPopupCountdown(null);
-        setFinalPopupPreview(null);
-        setBetNumbers(new Set());
-        localStorage.removeItem("placedNumbers");
-      } else if (isResult && countdown === 0) {
-        console.log("🛑 Final result received, stopping shuffle");
-        setFinalPopupCountdown(0);
-        setFinalPopupPreview(preview);
-
-        setTimeout(() => {
-          console.log("⏰ Auto-closing final result popup");
+        if (countdown === null) {
+          console.log("🔄 New round starting - resetting popup");
           setFinalPopupCountdown(null);
           setFinalPopupPreview(null);
-        }, 4000);
-      } else if (countdown > 0) {
-        console.log("⏳ Countdown in progress:", countdown);
-        setFinalPopupCountdown(countdown);
-        setFinalPopupPreview(preview);
+          setBetNumbers(new Set());
+          localStorage.removeItem("placedNumbers");
+        } else if (isResult && countdown === 0) {
+          console.log("🛑 Final result received, stopping shuffle");
+          setFinalPopupCountdown(0);
+          setFinalPopupPreview(preview);
+
+          // ✅ INCREASED TIMEOUT - Show result for 6 seconds instead of 4
+          setTimeout(() => {
+            console.log(
+              "⏰ Auto-closing final result popup after showing result"
+            );
+            setFinalPopupCountdown(null);
+            setFinalPopupPreview(null);
+          }, 6000); // Changed from 4000 to 6000ms
+        } else if (countdown > 0) {
+          console.log("⏳ Countdown in progress:", countdown);
+          setFinalPopupCountdown(countdown);
+          setFinalPopupPreview(preview);
+        }
       }
-    });
+    );
 
     return () => {
       console.log("🔌 Disconnecting socket");
@@ -1142,8 +1176,8 @@ const JackpotGame = () => {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
                   className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] 
-            bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 
-            rounded-full flex items-center justify-center shadow-2xl border-8 border-white"
+        bg-gradient-to-br from-yellow-300 via-yellow-400 to-orange-400 
+        rounded-full flex items-center justify-center shadow-2xl border-8 border-white"
                 >
                   <ShufflingNumber
                     preview={finalPopupPreview}
@@ -1161,20 +1195,41 @@ const JackpotGame = () => {
                   <div className="absolute top-2 text-sm sm:text-base text-white font-semibold tracking-wide drop-shadow">
                     {finalPopupCountdown > 0
                       ? "Final Draw in..."
-                      : "🎉 Final Result"}
+                      : "🎉 WINNING NUMBER"}
                   </div>
 
+                  {/* ✅ NEW: Show result info when final */}
                   {finalPopupCountdown === 0 && (
-                    <button
-                      onClick={() => {
-                        console.log("👆 Manual close of final popup");
-                        setFinalPopupCountdown(null);
-                        setFinalPopupPreview(null);
-                      }}
-                      className="absolute top-4 right-4 bg-white text-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold hover:bg-gray-100 transition-colors"
-                    >
-                      ×
-                    </button>
+                    <>
+                      <div className="absolute bottom-4 text-white font-bold text-lg drop-shadow-lg">
+                        Round Result
+                      </div>
+
+                      {/* ✅ NEW: Pulsing effect for final result */}
+                      <motion.div
+                        animate={{
+                          scale: [1, 1.1, 1],
+                          opacity: [0.8, 1, 0.8],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        className="absolute inset-0 rounded-full border-4 border-red-500 pointer-events-none"
+                      />
+
+                      <button
+                        onClick={() => {
+                          console.log("👆 Manual close of final popup");
+                          setFinalPopupCountdown(null);
+                          setFinalPopupPreview(null);
+                        }}
+                        className="absolute top-4 right-4 bg-white text-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold hover:bg-gray-100 transition-colors z-10"
+                      >
+                        ×
+                      </button>
+                    </>
                   )}
                 </motion.div>
               </div>
