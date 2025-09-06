@@ -16,7 +16,7 @@ const UserSpecification = () => {
         const res = await axios.get(
           `${BACKEND_URL}/api/bets/daily-profit-loss`
         );
-        console.log("API response data:", res.data);
+        // console.log("API response data:", res.data);
 
         if (Array.isArray(res.data)) {
           setData(res.data);

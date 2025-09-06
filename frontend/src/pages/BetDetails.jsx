@@ -264,7 +264,7 @@ const BetDetails = () => {
 
     try {
       const decodedUser = jwtDecode(token);
-      console.log("Decoded user:", decodedUser);
+    //   console.log("Decoded user:", decodedUser);
       setUser(decodedUser);
       fetchUserBets(decodedUser.id || decodedUser.userId);
       fetchUserBalance(decodedUser.id || decodedUser.userId);
@@ -278,7 +278,7 @@ const BetDetails = () => {
     setPending(true);
     try {
       const res = await axios.get(`${BACK}/api/bets/user/${uid}`);
-      console.log("Fetched bets:", res.data);
+    //   console.log("Fetched bets:", res.data);
       setBets(res.data);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -323,7 +323,7 @@ const BetDetails = () => {
       temp = temp.filter((b) => b.barcode && b.barcode.includes(barcodeSearch));
     }
 
-    console.log("Filtered bets:", temp);
+    // console.log("Filtered bets:", temp);
     setFiltered(temp);
   }, [bets, date, barcodeSearch]);
 
@@ -390,12 +390,12 @@ const BetDetails = () => {
     const amount = stake * 2;
     const bonus = bet.bonus ? parseFloat(bet.bonus) : 1;
 
-    console.log("🧮 Calculation for bet:", {
-      stake,
-      amount,
-      bonus,
-      status: bet.status,
-    });
+    // console.log("🧮 Calculation for bet:", {
+    //   stake,
+    //   amount,
+    //   bonus,
+    //   status: bet.status,
+    // });
 
     if (bet.status === "won") {
       const winAmount = amount * 80 * bonus;
@@ -415,7 +415,7 @@ const BetDetails = () => {
 
   const getBonusDisplay = (bet) => {
     const bonus = bet.bonus ? parseFloat(bet.bonus) : 1;
-    console.log("🎁 Bonus for bet", bet.id, ":", bonus);
+    // console.log("🎁 Bonus for bet", bet.id, ":", bonus);
     return `${bonus}x`;
   };
 
@@ -830,14 +830,14 @@ const BetDetails = () => {
                 const bonus = b.bonus ? parseFloat(b.bonus) : 1;
                 const winAmount = b.status === "won" ? amount * 80 * bonus : 0;
 
-                console.log("💰 Row calculation:", {
-                  betId: b.id,
-                  stake: b.stake,
-                  bonus: bonus,
-                  status: b.status,
-                  claimed: b.claimed,
-                  calculatedWin: winAmount,
-                });
+                // console.log("💰 Row calculation:", {
+                //   betId: b.id,
+                //   stake: b.stake,
+                //   bonus: bonus,
+                //   status: b.status,
+                //   claimed: b.claimed,
+                //   calculatedWin: winAmount,
+                // });
 
                 return (
                   <tr

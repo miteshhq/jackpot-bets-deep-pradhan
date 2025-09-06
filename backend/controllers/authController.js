@@ -137,7 +137,7 @@ export const loginUser = async (req, res) => {
 export const loginAdmin = (req, res) => {
     const { phone, password } = req.body;
 
-    console.log('Admin login attempt for phone:', phone);
+    // console.log('Admin login attempt for phone:', phone);
 
     if (!isAdmin(phone, password)) {
         return res.status(403).json({ message: 'Unauthorized - Invalid admin credentials' });
@@ -149,7 +149,7 @@ export const loginAdmin = (req, res) => {
         adminLevel: 'super'
     }, process.env.JWT_SECRET, { expiresIn: '2h' });
 
-    console.log('✅ Admin login successful for:', phone);
+    // console.log('✅ Admin login successful for:', phone);
     res.json({ token, message: 'Admin login successful' });
 };
 

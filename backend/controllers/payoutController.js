@@ -100,7 +100,7 @@ export const payPayout = async (req, res) => {
             return res.status(404).json({ error: "Withdrawal not found" });
         }
 
-        console.log("✅ Withdrawal found:", withdrawal);
+        // console.log("✅ Withdrawal found:", withdrawal);
 
         if (!withdrawal.bank_name || !withdrawal.bank_account_number || !withdrawal.ifsc_code) {
             console.error("❌ Missing bank details in withdrawal record", withdrawal);
@@ -172,7 +172,7 @@ export const updatePayoutStatus = async (req, res) => {
             return res.status(404).json({ error: "Withdrawal not found" });
         }
 
-        console.log("✅ Withdrawal found:", withdrawal);  // 🔍 Debug log
+        // console.log("✅ Withdrawal found:", withdrawal);  // 🔍 Debug log
 
         if (!withdrawal) return res.status(404).json({ error: "Payout not found" });
 
@@ -183,7 +183,7 @@ export const updatePayoutStatus = async (req, res) => {
         if (status === "approved") {
             await db.query("UPDATE withdrawals SET status = 'approved' WHERE id = ?", [id]);
 
-            console.log(`💰 Sending 💎${withdrawal.amount} to ${withdrawal.bank_name} - ${withdrawal.bank_account_number}`);
+            // console.log(`💰 Sending 💎${withdrawal.amount} to ${withdrawal.bank_name} - ${withdrawal.bank_account_number}`);
             return res.json({ message: "Payout approved & money sent" });
 
         } else if (status === "rejected") {

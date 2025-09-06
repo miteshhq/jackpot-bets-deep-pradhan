@@ -382,7 +382,7 @@ const ShufflingNumber = ({ preview, isFinal }) => {
   const [showFinalResult, setShowFinalResult] = React.useState(false);
 
   useEffect(() => {
-    console.log("🎰 ShufflingNumber: isFinal =", isFinal, "preview =", preview);
+    // console.log("🎰 ShufflingNumber: isFinal =", isFinal, "preview =", preview);
 
     if (!isFinal) {
       // Reset final result state when not final
@@ -394,11 +394,11 @@ const ShufflingNumber = ({ preview, isFinal }) => {
       }, 80);
 
       return () => {
-        console.log("🛑 Clearing shuffling interval");
+        // console.log("🛑 Clearing shuffling interval");
         clearInterval(interval);
       };
     } else {
-      console.log("✅ Displaying final number:", preview);
+      //   console.log("✅ Displaying final number:", preview);
       // Set final result immediately
       setDisplay(preview?.toString().padStart(2, "0") || "--");
 
@@ -428,9 +428,7 @@ const ShufflingNumber = ({ preview, isFinal }) => {
         bounce: showFinalResult ? 0.4 : 0,
       }}
       className={`text-[110px] sm:text-[140px] font-extrabold drop-shadow-lg transition-all duration-300 ${
-        isFinal && showFinalResult
-          ? "text-red-600"
-          : "text-black"
+        isFinal && showFinalResult ? "text-red-600" : "text-black"
       }`}
     >
       {display}
@@ -548,17 +546,17 @@ const JackpotGame = () => {
     if (barcodeInput.length === 7 && /^[5]\d{6}$/.test(barcodeInput)) {
       const fetchBetDetails = async () => {
         try {
-          console.log("🔍 Fetching bet details for barcode:", barcodeInput);
+          //   console.log("🔍 Fetching bet details for barcode:", barcodeInput);
           const { data } = await axios.get(
             `${BACKEND_URL}/api/bets/by-barcode/${barcodeInput}`
           );
 
           if (data && data.length > 0) {
-            console.log("✅ Found bet details:", data);
+            // console.log("✅ Found bet details:", data);
             setBetDetailsData(data);
             setBetDetailsModal(true);
           } else {
-            console.log("❌ No bets found for barcode:", barcodeInput);
+            // console.log("❌ No bets found for barcode:", barcodeInput);
             setBetDetailsData([]);
             setBetDetailsModal(true);
           }
@@ -619,7 +617,7 @@ const JackpotGame = () => {
 
   // Clear function for manual clearing
   const clearNumber = () => {
-    console.log("🧹 Manual clearing all betting fields...");
+    // console.log("🧹 Manual clearing all betting fields...");
     setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
     setEValues(Array(10).fill(""));
     setRowValues(Array(10).fill(""));
@@ -631,7 +629,7 @@ const JackpotGame = () => {
 
   // Auto clear function after successful bet placement
   const autoClearAfterBet = () => {
-    console.log("🔄 Auto-clearing after successful bet placement...");
+    // console.log("🔄 Auto-clearing after successful bet placement...");
     setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
     setEValues(Array(10).fill(""));
     setRowValues(Array(10).fill(""));
@@ -683,43 +681,43 @@ const JackpotGame = () => {
       query: { userId: user?.id || "" },
     });
 
-    socketRef.current.on("connect", () =>
-      console.log("🟢 Connected to socket.io server")
-    );
+    // socketRef.current.on("connect", () =>
+    //   console.log("🟢 Connected to socket.io server")
+    // );
 
     socketRef.current.on("timer-update", (sec) => setTimeLeft(sec));
 
     socketRef.current.on(
       "final-popup",
       ({ countdown, preview, isResult, bonus }) => {
-        console.log("📩 final-popup received:", {
-          countdown,
-          preview,
-          isResult,
-          bonus,
-        });
+        // console.log("📩 final-popup received:", {
+        //   countdown,
+        //   preview,
+        //   isResult,
+        //   bonus,
+        // });
 
         if (countdown === null) {
-          console.log("🔄 New round starting - resetting popup");
+          //   console.log("🔄 New round starting - resetting popup");
           setFinalPopupCountdown(null);
           setFinalPopupPreview(null);
           setBetNumbers(new Set());
           localStorage.removeItem("placedNumbers");
         } else if (isResult && countdown === 0) {
-          console.log("🛑 Final result received, stopping shuffle");
+          //   console.log("🛑 Final result received, stopping shuffle");
           setFinalPopupCountdown(0);
           setFinalPopupPreview(preview);
 
           // ✅ INCREASED TIMEOUT - Show result for 6 seconds instead of 4
           setTimeout(() => {
-            console.log(
-              "⏰ Auto-closing final result popup after showing result"
-            );
+            // console.log(
+            //   "⏰ Auto-closing final result popup after showing result"
+            // );
             setFinalPopupCountdown(null);
             setFinalPopupPreview(null);
           }, 6000); // Changed from 4000 to 6000ms
         } else if (countdown > 0) {
-          console.log("⏳ Countdown in progress:", countdown);
+          //   console.log("⏳ Countdown in progress:", countdown);
           setFinalPopupCountdown(countdown);
           setFinalPopupPreview(preview);
         }
@@ -727,7 +725,7 @@ const JackpotGame = () => {
     );
 
     return () => {
-      console.log("🔌 Disconnecting socket");
+      //   console.log("🔌 Disconnecting socket");
       socketRef.current.disconnect();
     };
   }, [user]);
@@ -1221,7 +1219,7 @@ const JackpotGame = () => {
 
                       <button
                         onClick={() => {
-                          console.log("👆 Manual close of final popup");
+                          //   console.log("👆 Manual close of final popup");
                           setFinalPopupCountdown(null);
                           setFinalPopupPreview(null);
                         }}

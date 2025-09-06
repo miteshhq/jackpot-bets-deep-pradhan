@@ -104,10 +104,8 @@ const PrintF12 = () => {
       totalPts,
     });
 
-    // 🔥 AUTO PRINT: Trigger print dialog if autoPrint flag is true
     if (autoPrint && !hasTriggeredPrint) {
       setTimeout(() => {
-        console.log("🖨️ Auto-triggering print dialog...");
         window.print();
         setHasTriggeredPrint(true);
 

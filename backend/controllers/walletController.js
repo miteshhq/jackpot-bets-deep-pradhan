@@ -213,14 +213,14 @@ export const getUserBalance = async (req, res) => {
 // ✅ Fetch transaction history for user
 export const getUserTransactions = async (req, res) => {
     const { userId } = req.params;
-    console.log('Fetching transactions for user:', userId);
+    // console.log('Fetching transactions for user:', userId);
     try {
         const [rows] = await db.query(
             `SELECT amount, type, status, created_at
        FROM transactions WHERE user_id = ? ORDER BY created_at DESC`,
             [userId]
         );
-        console.log('Transactions fetched:', rows.length);
+        // console.log('Transactions fetched:', rows.length);
         res.json(rows);
     } catch (err) {
         console.error('Failed to fetch transactions:', err);
@@ -244,10 +244,10 @@ export const getAllTransactions = async (req, res) => {
 
 // ✅ Get total transaction amount
 export const getTotalTransactions = async (req, res) => {
-    console.log('✅ /transactions/total route hit');
+    // console.log('✅ /transactions/total route hit');
     try {
         const [rows] = await db.query('SELECT SUM(amount) AS totalAmount FROM transactions WHERE status = "success"');
-        console.log('Fetched total transaction amount:', rows);
+        // console.log('Fetched total transaction amount:', rows);
         const totalAmount = rows[0]?.totalAmount || 0;
         res.json({ totalAmount });
     } catch (error) {

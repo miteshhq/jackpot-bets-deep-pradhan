@@ -42,7 +42,7 @@ export const generateManualResult = async (req, res) => {
         const num = Math.floor(Math.random() * 100); // result number
         const bonus = Math.floor(Math.random() * 3) + 1; // Random bonus 1-3x
 
-        console.log(`📝 Inserting result for roundTime: ${roundTime}, number: ${num}, bonus: ${bonus}x`);
+        // console.log(`📝 Inserting result for roundTime: ${roundTime}, number: ${num}, bonus: ${bonus}x`);
 
         // Insert result with bonus
         try {
@@ -69,7 +69,7 @@ export const generateManualResult = async (req, res) => {
         );
 
         if (bets.length === 0) {
-            console.log('ℹ️ No bets for this round.');
+            // console.log('ℹ️ No bets for this round.');
         } else {
             for (const bet of bets) {
                 // ✅ FIXED: Use correct column names
@@ -102,7 +102,7 @@ export const generateManualResult = async (req, res) => {
                         }
                     }
 
-                    console.log(`✅ User ${bet.user_id} WON. Bet: ${bet.number}, Result: ${num}, Bonus: ${bonus}x, Amount: ${winningAmount}`);
+                    // console.log(`✅ User ${bet.user_id} WON. Bet: ${bet.number}, Result: ${num}, Bonus: ${bonus}x, Amount: ${winningAmount}`);
                 } else {
                     // ✅ FIXED: Update losing bets with bonus
                     try {
@@ -121,7 +121,7 @@ export const generateManualResult = async (req, res) => {
                         }
                     }
 
-                    console.log(`❌ User ${bet.user_id} LOST. Bet: ${bet.number}, Result: ${num}`);
+                    // console.log(`❌ User ${bet.user_id} LOST. Bet: ${bet.number}, Result: ${num}`);
                 }
             }
         }
@@ -129,7 +129,7 @@ export const generateManualResult = async (req, res) => {
         // Emit to frontend via socket
         getIO().emit('new-result', { time: roundTime, number: num, bonus });
 
-        console.log(`🎯 Final result: ${roundTime} → ${num} (${bonus}x bonus)`);
+        // console.log(`🎯 Final result: ${roundTime} → ${num} (${bonus}x bonus)`);
         res.json({ time: roundTime, number: num, bonus });
 
     } catch (e) {

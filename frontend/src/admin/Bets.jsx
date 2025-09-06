@@ -13,7 +13,7 @@ const Bets = () => {
     const fetchBets = async () => {
       try {
         const res = await axios.get(`${BACKEND_URL}/api/bets/all`);
-        console.log("Bets fetched:", res.data);
+        // console.log("Bets fetched:", res.data);
         setBets(res.data);
         setFilteredBets(res.data);
       } catch (err) {

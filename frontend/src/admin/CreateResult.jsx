@@ -43,7 +43,7 @@ const AdminManualResultSetterWithSummary = () => {
     const fetchHistory = async () => {
       try {
         const res = await axios.get(`${BACKEND_URL}/api/bets/gethistory`);
-        console.log(res);
+        // console.log(res);
         setBetsHistory(res.data.rounds || []);
         setLoadingHistory(false);
       } catch (err) {
@@ -90,7 +90,7 @@ const AdminManualResultSetterWithSummary = () => {
     }
 
     try {
-      console.log(`🎯 Submitting manual result: ${num} with ${bon}x bonus`);
+    //   console.log(`🎯 Submitting manual result: ${num} with ${bon}x bonus`);
 
       const res = await fetch(`${BACKEND_URL}/api/results/set-manual-result`, {
         method: "POST",
@@ -99,7 +99,7 @@ const AdminManualResultSetterWithSummary = () => {
       });
 
       const data = await res.json();
-      console.log("📥 Server response:", data);
+    //   console.log("📥 Server response:", data);
 
       if (res.ok) {
         setMsg(`✅ Result set: ${num} with ${bon}x bonus - ${data.msg}`);

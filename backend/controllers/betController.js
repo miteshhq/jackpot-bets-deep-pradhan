@@ -39,28 +39,28 @@ export const placeBet = async (req, res) => {
             return res.status(500).json({ msg: '❌ Round time not available' });
         }
 
-        console.log('🎲 Placing bet:', {
-            userId,
-            number,
-            stake: amount,
-            roundTime,
-            barcode,
-            currentTime: new Date().toLocaleTimeString()
-        });
+        // console.log('🎲 Placing bet:', {
+        //     userId,
+        //     number,
+        //     stake: amount,
+        //     roundTime,
+        //     barcode,
+        //     currentTime: new Date().toLocaleTimeString()
+        // });
 
         try {
             const [result] = await db.query(
                 'INSERT INTO bets (user_id, number, stake, roundTime, barcode, status, bonus, placedAt) VALUES (?, ?, ?, ?, ?, "pending", 1.00, NOW())',
                 [userId, number, amount, roundTime, barcode]
             );
-            console.log('✅ Bet inserted with ID:', result.insertId);
+            // console.log('✅ Bet inserted with ID:', result.insertId);
         } catch (err) {
             if (err.code === 'ER_BAD_FIELD_ERROR') {
                 const [result] = await db.query(
                     'INSERT INTO bets (user_id, number, stake, roundTime, barcode, status, placedAt) VALUES (?, ?, ?, ?, ?, "pending", NOW())',
                     [userId, number, amount, roundTime, barcode]
                 );
-                console.log('✅ Bet inserted (no bonus) with ID:', result.insertId);
+                // console.log('✅ Bet inserted (no bonus) with ID:', result.insertId);
             } else {
                 throw err;
             }
@@ -70,7 +70,7 @@ export const placeBet = async (req, res) => {
             'SELECT * FROM bets WHERE user_id = ? AND roundTime = ? AND barcode = ? ORDER BY id DESC LIMIT 1',
             [userId, roundTime, barcode]
         );
-        console.log('🔍 Bet verification:', verifyBet[0] || 'BET NOT FOUND!');
+        // console.log('🔍 Bet verification:', verifyBet[0] || 'BET NOT FOUND!');
 
         const [[updated]] = await db.query('SELECT balance FROM users WHERE id = ?', [userId]);
 
@@ -95,7 +95,7 @@ export const getBetsSummary = async (req, res) => {
             return res.status(500).json({ msg: '❌ Round time not available' });
         }
 
-        console.log(`📊 Getting bets summary for round: ${roundTime}`);
+        // console.log(`📊 Getting bets summary for round: ${roundTime}`);
 
         const [rows] = await db.query(`
             SELECT number, SUM(stake) AS totalStake
@@ -104,7 +104,7 @@ export const getBetsSummary = async (req, res) => {
             GROUP BY number
         `, [roundTime]);
 
-        console.log(`📊 Found ${rows.length} different numbers with bets for round ${roundTime}`);
+        // console.log(`📊 Found ${rows.length} different numbers with bets for round ${roundTime}`);
 
         const summary = {};
         for (let i = 0; i < 100; i++) {
@@ -364,7 +364,7 @@ export const claimBet = async (req, res) => {
         // Update bet status to claimed
         await db.query('UPDATE bets SET status = "claimed" WHERE id = ?', [betId]);
 
-        console.log(`✅ Payout request created for bet ${betId}, amount: ₹${winAmount}`);
+        // console.log(`✅ Payout request created for bet ${betId}, amount: ₹${winAmount}`);
 
         return res.json({
             msg: '✅ Payout request submitted successfully',
@@ -403,7 +403,7 @@ export const updateBetClaimStatus = async (req, res) => {
         } catch (err) {
             // Column might already exist, ignore error
             if (!err.message.includes('Duplicate column name')) {
-                console.log('Column might already exist:', err.message);
+                // console.log('Column might already exist:', err.message);
             }
         }
 
@@ -438,15 +438,15 @@ export const getBetsByUser = async (req, res) => {
         const [bets] = await db.query(query, [userId]);
 
         // ✅ Log for debugging
-        console.log(`📊 Fetched ${bets.length} bets for user ${userId}`);
+        // console.log(`📊 Fetched ${bets.length} bets for user ${userId}`);
         if (bets.length > 0) {
-            console.log('📊 Sample bet:', {
-                id: bets[0].id,
-                status: bets[0].status,
-                bonus: bets[0].bonus,
-                stake: bets[0].stake,
-                claimed: bets[0].claimed
-            });
+            // console.log('📊 Sample bet:', {
+            //     id: bets[0].id,
+            //     status: bets[0].status,
+            //     bonus: bets[0].bonus,
+            //     stake: bets[0].stake,
+            //     claimed: bets[0].claimed
+            // });
         }
 
         res.status(200).json(bets);
@@ -470,17 +470,17 @@ export const getAllBets = async (req, res) => {
         const [bets] = await db.query(query);
 
         // ✅ Log for debugging
-        console.log(`📊 Fetched ${bets.length} bets for admin`);
+        // console.log(`📊 Fetched ${bets.length} bets for admin`);
         if (bets.length > 0) {
             const latestBet = bets[0];
-            console.log('📊 Latest bet:', {
-                id: latestBet.id,
-                status: latestBet.status,
-                bonus: latestBet.bonus,
-                stake: latestBet.stake,
-                number: latestBet.number,
-                claimed: latestBet.claimed
-            });
+            // console.log('📊 Latest bet:', {
+            //     id: latestBet.id,
+            //     status: latestBet.status,
+            //     bonus: latestBet.bonus,
+            //     stake: latestBet.stake,
+            //     number: latestBet.number,
+            //     claimed: latestBet.claimed
+            // });
         }
 
         return res.json(bets);
@@ -518,10 +518,10 @@ export const getBetsByBarcode = async (req, res) => {
         }
 
         // ✅ Log for debugging
-        console.log(`📊 Fetched ${bets.length} bets for barcode ${barcode}`);
+        // console.log(`📊 Fetched ${bets.length} bets for barcode ${barcode}`);
         bets.forEach(bet => {
             if (bet.status === 'won') {
-                console.log(`🏆 Winning bet: stake(${bet.stake}) × 2 × 80 × bonus(${bet.bonus}) = ${bet.winAmount}, claimed: ${bet.claimed}`);
+                // console.log(`🏆 Winning bet: stake(${bet.stake}) × 2 × 80 × bonus(${bet.bonus}) = ${bet.winAmount}, claimed: ${bet.claimed}`);
             }
         });
 

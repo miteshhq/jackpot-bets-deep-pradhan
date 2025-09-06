@@ -36,7 +36,7 @@ const JackpotGameResult = () => {
     const socket = io(SOCKET_URL);
 
     socket.on("connect", () => {
-      console.log("🟢 Connected to socket:", socket.id);
+    //   console.log("🟢 Connected to socket:", socket.id);
     });
 
     socket.on("new-result", (newResult) => {
