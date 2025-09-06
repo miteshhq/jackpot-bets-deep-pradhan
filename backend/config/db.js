@@ -28,7 +28,7 @@ const createDatabase = async () => {
     }
 };
 
-// await createDatabase();
+await createDatabase();
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
