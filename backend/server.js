@@ -14,6 +14,7 @@ import payoutRoutes from "./routes/payoutRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import referralRoutes from './routes/referralRoutes.js'; // ✅ सही फाइल नाम
 import walletRoutes from './routes/walletRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 import { initSocket } from './socket/index.js';
 
@@ -40,6 +41,7 @@ app.use("/api/payout", payoutRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/referrals', referralRoutes); // ✅ सही रूट
 app.use('/api/wallet', walletRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
     res.send(`Hello | Kolkata Time: ${req.kolkataTime}`);

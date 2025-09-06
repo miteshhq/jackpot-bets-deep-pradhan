@@ -8,7 +8,7 @@ import {
   FaSignOutAlt,
   FaMoneyCheckAlt,
   FaListAlt,
-  FaUser,   // Added here
+  FaUser, // Added here
 } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
 import logo from "../assets/logo (2).png";
@@ -28,6 +28,7 @@ const Sidebar = ({ isOpen }) => {
       icon: <FaTachometerAlt size={20} />,
       label: "Dashboard",
     },
+    { to: "/admins", icon: <FaUsers size={20} />, label: "Admins" },
     { to: "/admin-users", icon: <FaUsers size={20} />, label: "Users" },
     { to: "/admin-bets", icon: <FaDice size={20} />, label: "Bets" },
     {
@@ -79,7 +80,9 @@ const Sidebar = ({ isOpen }) => {
       <div>
         <div className="flex items-center gap-3 py-4">
           <img src={logo} alt="Logo" className="w-8 h-8" />
-          {isOpen && <h2 className="text-xl font-bold tracking-wide">Admin Panel</h2>}
+          {isOpen && (
+            <h2 className="text-xl font-bold tracking-wide">Admin Panel</h2>
+          )}
         </div>
 
         <ul className="space-y-2">
@@ -88,7 +91,9 @@ const Sidebar = ({ isOpen }) => {
               <NavLink
                 to={to}
                 className={({ isActive }) =>
-                  `${linkClasses} ${isActive ? "bg-white text-blue-800 font-semibold" : ""}`
+                  `${linkClasses} ${
+                    isActive ? "bg-white text-blue-800 font-semibold" : ""
+                  }`
                 }
               >
                 {icon}
@@ -111,11 +116,3 @@ const Sidebar = ({ isOpen }) => {
 };
 
 export default Sidebar;
-
-
-
-
-
-
-
-

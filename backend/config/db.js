@@ -1,5 +1,6 @@
-// config/db.js (Updated with claimed column and bonus column support)
+// config/db.js (Updated with admins table)
 import mysql from 'mysql2/promise';
+import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -40,10 +41,27 @@ const pool = mysql.createPool({
     queueLimit: 0,
 });
 
-// Create all required tables (Updated with claimed and bonus columns)
+// Create all required tables (Updated with admins table)
 export const createTables = async () => {
     try {
-        console.log('🔄 Creating tables for manual wallet system...');
+        console.log('🔄 Creating tables for admin management system...');
+
+        // Admins table (NEW)
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS admins (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                phone VARCHAR(20) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                name VARCHAR(100),
+                role ENUM('super', 'admin') DEFAULT 'admin',
+                created_by INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_phone (phone),
+                INDEX idx_role (role),
+                FOREIGN KEY (created_by) REFERENCES admins(id) ON DELETE SET NULL
+            )
+        `);
 
         // 1. Users table
         await pool.execute(`
@@ -59,7 +77,8 @@ export const createTables = async () => {
             )
         `);
 
-        // 2. Bets table (betController.js) - Updated with bonus and claimed columns
+        // ... (rest of your existing tables remain the same)
+        // 2. Bets table - keeping existing code
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS bets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -79,7 +98,7 @@ export const createTables = async () => {
             )
         `);
 
-        // Check and add bonus column to bets table if it doesn't exist
+        // Add bonus and claimed columns to bets table (existing logic)
         try {
             const [bonusColumns] = await pool.execute(`
                 SELECT COLUMN_NAME 
@@ -98,7 +117,6 @@ export const createTables = async () => {
             console.log('ℹ️ Bonus column might already exist or error adding it:', bonusError.message);
         }
 
-        // Check and add claimed column to bets table if it doesn't exist
         try {
             const [claimedColumns] = await pool.execute(`
                 SELECT COLUMN_NAME 
@@ -266,8 +284,11 @@ export const createTables = async () => {
 
         console.log('✅ All tables created successfully!');
 
-        // Log table creation summary
+        // Seed default admin
+        await seedDefaultAdmin();
+
         console.log('📊 Created/Updated tables:');
+        console.log('   - admins (NEW - admin management)');
         console.log('   - users (authentication)');
         console.log('   - bets (betting system with bonus and claimed columns)');
         console.log('   - results (game results)');
@@ -284,7 +305,37 @@ export const createTables = async () => {
     }
 };
 
-// Only call createTables here, not in server.js
-await createTables();
+// Seed default admin from environment variables
+const seedDefaultAdmin = async () => {
+    try {
+        const defaultPhone = process.env.DEFAULT_ADMIN_PHONE;
+        const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD;
 
+        if (!defaultPhone || !defaultPassword) {
+            console.warn('⚠️ No default admin credentials found in environment variables');
+            return;
+        }
+
+        // Check if admin already exists
+        const [existingAdmin] = await pool.execute(
+            'SELECT * FROM admins WHERE phone = ?',
+            [defaultPhone]
+        );
+
+        if (existingAdmin.length === 0) {
+            const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+            await pool.execute(
+                'INSERT INTO admins (phone, password, name, role) VALUES (?, ?, ?, ?)',
+                [defaultPhone, hashedPassword, 'Default Admin', 'super']
+            );
+            console.log(`✅ Default admin seeded: ${defaultPhone}`);
+        } else {
+            console.log(`ℹ️ Default admin already exists: ${defaultPhone}`);
+        }
+    } catch (error) {
+        console.error('❌ Error seeding default admin:', error);
+    }
+};
+
+await createTables();
 export default pool;

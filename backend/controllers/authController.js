@@ -3,51 +3,33 @@ import jwt from 'jsonwebtoken';
 import db from '../config/db.js';
 import axios from 'axios';
 
-const API_KEY = 'f4d751b8c1f8d5c3208e3ca6c998c7da73198'; // SMS API key
+const API_KEY = 'f4d751b8c1f8d5c3208e3ca6c998c7da73198';
 const otpStore = new Map();
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000);
 
-// ✅ Parse admin credentials from environment variables
-const parseAdminCredentials = () => {
-    const adminCredsString = process.env.ADMIN_CREDENTIALS;
-    if (!adminCredsString) {
-        console.warn('⚠️ No ADMIN_CREDENTIALS found in environment variables');
-        return [];
-    }
-
+// ✅ Updated to check admin from database
+const isAdminFromDB = async (phone, password) => {
     try {
-        return adminCredsString.split(',').map(cred => {
-            const [phone, password] = cred.trim().split(':');
-            if (!phone || !password) {
-                throw new Error(`Invalid admin credential format: ${cred}`);
-            }
-            return { phone: phone.trim(), password: password.trim() };
-        });
+        const [admins] = await db.query('SELECT * FROM admins WHERE phone = ?', [phone]);
+        if (admins.length === 0) return false;
+
+        const admin = admins[0];
+        const passwordMatch = await bcrypt.compare(password, admin.password);
+        return passwordMatch ? admin : false;
     } catch (error) {
-        console.error('❌ Error parsing admin credentials:', error.message);
-        return [];
+        console.error('❌ Error checking admin credentials:', error);
+        return false;
     }
 };
 
-// Get admin credentials on startup
-const adminCredentials = parseAdminCredentials();
-console.log(`✅ Loaded ${adminCredentials.length} admin accounts`);
-
-// ✅ Helper function to check if user is admin
-const isAdmin = (phone, password) => {
-    return adminCredentials.some(admin =>
-        admin.phone === phone && admin.password === password
-    );
-};
-
-// ✅ Send OTP
+// ✅ Send OTP (unchanged)
 export const sendUserOTP = async (req, res) => {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ message: 'Phone number is required' });
 
     const otp = generateOTP();
     otpStore.set(phone, otp);
-    setTimeout(() => otpStore.delete(phone), 300000); // OTP expires in 5 minutes
+    setTimeout(() => otpStore.delete(phone), 300000);
 
     try {
         const smsUrl = `https://apihome.in/panel/api/bulksms/?key=${API_KEY}&mobile=${phone}&otp=${otp}`;
@@ -58,26 +40,22 @@ export const sendUserOTP = async (req, res) => {
     }
 };
 
-// ✅ Verify OTP and Register New User with 💎20 balance + referral reward
+// ✅ Verify OTP (unchanged)
 export const verifyUserOTP = async (req, res) => {
     const { phone, otp, password, referralCode } = req.body;
 
-    // Validate inputs
     if (!phone || !otp || !password)
         return res.status(400).json({ message: 'Phone, OTP and password are required' });
 
-    // Check OTP correctness & expiration
     const storedOtp = otpStore.get(phone);
     if (!storedOtp) return res.status(400).json({ message: 'OTP expired or not generated' });
     if (parseInt(otp) !== storedOtp) return res.status(401).json({ message: 'Invalid OTP' });
 
-    // Check if user already exists
     const [users] = await db.query('SELECT * FROM users WHERE phone = ?', [phone]);
     if (users.length > 0) {
         return res.status(409).json({ message: 'User already exists. Please login.' });
     }
 
-    // Hash password & insert new user with 💎20 balance
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
         'INSERT INTO users (phone, password, balance) VALUES (?, ?, ?)',
@@ -86,7 +64,6 @@ export const verifyUserOTP = async (req, res) => {
 
     const newUserId = result.insertId;
 
-    // Referral Bonus Logic
     if (referralCode) {
         const [refRows] = await db.query('SELECT user_id FROM referrals WHERE code = ?', [referralCode]);
         if (refRows.length > 0) {
@@ -106,17 +83,20 @@ export const verifyUserOTP = async (req, res) => {
     res.json({ message: 'Registration successful', token, referralBonus: !!referralCode });
 };
 
-// ✅ User Login (includes Multiple Admin check)
+// ✅ Updated User Login with database admin check
 export const loginUser = async (req, res) => {
     const { phone, password } = req.body;
     if (!phone || !password) return res.status(400).json({ message: 'Phone and password are required' });
 
-    // ✅ Multiple Admin login check
-    if (isAdmin(phone, password)) {
+    // ✅ Check admin from database first
+    const adminUser = await isAdminFromDB(phone, password);
+    if (adminUser) {
         const token = jwt.sign({
             admin: true,
             phone: phone,
-            adminLevel: 'super' // You can add different admin levels if needed
+            adminLevel: adminUser.role || 'admin',
+            adminId: adminUser.id,
+            adminName: adminUser.name
         }, process.env.JWT_SECRET, { expiresIn: '2h' });
         return res.json({ message: 'Admin login successful', token, isAdmin: true });
     }
@@ -133,27 +113,27 @@ export const loginUser = async (req, res) => {
     res.json({ message: 'Login successful', token, isAdmin: false });
 };
 
-// ✅ Admin Login (separate route - now supports multiple admins)
-export const loginAdmin = (req, res) => {
+// ✅ Updated Admin Login
+export const loginAdmin = async (req, res) => {
     const { phone, password } = req.body;
 
-    // console.log('Admin login attempt for phone:', phone);
-
-    if (!isAdmin(phone, password)) {
+    const adminUser = await isAdminFromDB(phone, password);
+    if (!adminUser) {
         return res.status(403).json({ message: 'Unauthorized - Invalid admin credentials' });
     }
 
     const token = jwt.sign({
         admin: true,
         phone: phone,
-        adminLevel: 'super'
+        adminLevel: adminUser.role || 'admin',
+        adminId: adminUser.id,
+        adminName: adminUser.name
     }, process.env.JWT_SECRET, { expiresIn: '2h' });
 
-    // console.log('✅ Admin login successful for:', phone);
     res.json({ token, message: 'Admin login successful' });
 };
 
-// ✅ Middleware: Token Verification
+// Keep all other functions unchanged (verifyToken, getUserData, etc.)
 export const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ message: 'No token provided' });
@@ -170,7 +150,6 @@ export const verifyToken = (req, res, next) => {
     }
 };
 
-// ✅ Get User Data
 export const getUserData = async (req, res) => {
     try {
         if (req.user.admin) return res.status(403).json({ message: 'Admin does not have user data' });
@@ -189,7 +168,6 @@ export const getUserData = async (req, res) => {
     }
 };
 
-// ✅ Admin: Get All Users
 export const getAllUsers = async (req, res) => {
     if (!req.user?.admin) return res.status(403).json({ message: 'Access denied' });
 
@@ -203,7 +181,6 @@ export const getAllUsers = async (req, res) => {
     }
 };
 
-// ✅ Admin: Get User Count
 export const getUserCount = async (req, res) => {
     if (!req.user?.admin) return res.status(403).json({ message: 'Access denied' });
 
@@ -215,18 +192,16 @@ export const getUserCount = async (req, res) => {
     }
 };
 
-// Send OTP for password reset
 export const sendResetPasswordOTP = async (req, res) => {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ message: 'Phone number is required' });
 
-    // Check if user exists
     const [users] = await db.query('SELECT * FROM users WHERE phone = ?', [phone]);
     if (users.length === 0) return res.status(404).json({ message: 'User not found' });
 
     const otp = generateOTP();
     otpStore.set(phone, otp);
-    setTimeout(() => otpStore.delete(phone), 300000); // OTP expires in 5 minutes
+    setTimeout(() => otpStore.delete(phone), 300000);
 
     try {
         const smsUrl = `https://apihome.in/panel/api/bulksms/?key=${API_KEY}&mobile=${phone}&otp=${otp}`;
@@ -237,7 +212,6 @@ export const sendResetPasswordOTP = async (req, res) => {
     }
 };
 
-// Verify OTP and reset password
 export const verifyResetPasswordOTP = async (req, res) => {
     const { phone, otp, newPassword } = req.body;
 
@@ -256,18 +230,18 @@ export const verifyResetPasswordOTP = async (req, res) => {
     res.json({ message: 'Password reset successful' });
 };
 
-// ✅ Get current admin info (useful for display)
 export const getAdminInfo = (req, res) => {
     if (!req.user?.admin) return res.status(403).json({ message: 'Access denied' });
 
     res.json({
         phone: req.user.phone,
         adminLevel: req.user.adminLevel || 'standard',
+        adminId: req.user.adminId,
+        adminName: req.user.adminName,
         isAdmin: true
     });
 };
 
-// ✅ Admin: Delete User by ID (Fixed for mysql2 transaction handling)
 export const deleteUserByAdmin = async (req, res) => {
     if (!req.user?.admin) return res.status(403).json({ message: 'Access denied' });
 
@@ -275,13 +249,9 @@ export const deleteUserByAdmin = async (req, res) => {
     let connection;
 
     try {
-        // Get connection from pool for transaction
         connection = await db.getConnection();
-
-        // Begin transaction
         await connection.beginTransaction();
 
-        // Check if user exists
         const [users] = await connection.query('SELECT * FROM users WHERE id = ?', [userId]);
         if (users.length === 0) {
             await connection.rollback();
@@ -291,7 +261,6 @@ export const deleteUserByAdmin = async (req, res) => {
 
         const userToDelete = users[0];
 
-        // Delete related records first (to avoid foreign key constraints)
         await connection.query('DELETE FROM referral_rewards WHERE referrer_id = ? OR referred_user_id = ?', [userId, userId]);
         await connection.query('DELETE FROM referrals WHERE user_id = ?', [userId]);
         await connection.query('DELETE FROM bets WHERE user_id = ?', [userId]);
@@ -299,11 +268,8 @@ export const deleteUserByAdmin = async (req, res) => {
         await connection.query('DELETE FROM withdrawal_requests WHERE user_id = ?', [userId]);
         await connection.query('DELETE FROM deposit_requests WHERE user_id = ?', [userId]);
         await connection.query('DELETE FROM withdrawals WHERE user_id = ?', [userId]);
-
-        // Finally delete the user
         await connection.query('DELETE FROM users WHERE id = ?', [userId]);
 
-        // Commit transaction
         await connection.commit();
         connection.release();
 
@@ -316,7 +282,6 @@ export const deleteUserByAdmin = async (req, res) => {
         });
 
     } catch (err) {
-        // Rollback on error
         if (connection) {
             try {
                 await connection.rollback();

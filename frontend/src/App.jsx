@@ -25,6 +25,7 @@ import ReportS from "./pages/ReportS";
 import ForgetPassword from "./components/ForgetPassword";
 import UserSpecification from "./admin/UserSpecification"; // Adjust the path if needed
 import DepositRequests from "./admin/DepositRequests";
+import Admins from "./admin/Admins";
 
 const App = () => {
   return (
@@ -78,6 +79,14 @@ const App = () => {
           element={
             <DashboardLayout>
               <Transaction />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/admins"
+          element={
+            <DashboardLayout>
+              <Admins />
             </DashboardLayout>
           }
         />
