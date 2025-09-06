@@ -8,7 +8,7 @@ import io from "socket.io-client";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
-// ✅ Bet Details Modal Component
+// ✅ Fixed Bet Details Modal Component
 const BetDetailsModal = ({
   betDetails,
   userBalance,
@@ -21,6 +21,8 @@ const BetDetailsModal = ({
   const [accountNumber, setAccountNumber] = useState("");
   const [ifsc, setIfsc] = useState("");
   const [step, setStep] = useState(1);
+  const [upiId, setUpiId] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const BANKS = [
     "State Bank of India",
@@ -68,59 +70,120 @@ const BetDetailsModal = ({
     return `${hour12}:${minutes} ${ampm}`;
   };
 
-  const handleClaim = async (bet) => {
-    const winAmount = calculateWinAmount(bet);
-    const trimmedBankName = bankName.trim();
-    const trimmedAccountNumber = accountNumber.trim();
-    const trimmedIfsc = ifsc.trim().toUpperCase();
+  const validateBank = () => {
+    const hasBankDetails =
+      bankName.trim() && accountNumber.trim() && ifsc.trim();
+    const hasUpiId = upiId.trim();
 
-    if (!trimmedBankName) return alert("Please enter your bank name");
-    if (!/^\d{6,18}$/.test(trimmedAccountNumber))
-      return alert("Please enter a valid account number");
-    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(trimmedIfsc))
-      return alert("Please enter a valid IFSC code");
-
-    if (winAmount > userBalance) {
+    if (!hasBankDetails && !hasUpiId) {
       return alert(
-        `❌ Insufficient balance! You have ₹${Number(userBalance).toFixed(
-          2
-        )} but trying to claim ₹${winAmount.toFixed(2)}`
+        "Please provide either complete bank details (Bank Name, Account Number, IFSC) OR UPI ID"
       );
     }
 
+    if (hasBankDetails) {
+      if (!/^\d{6,18}$/.test(accountNumber.trim())) {
+        return alert("Please enter a valid account number (6-18 digits)");
+      }
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifsc.trim())) {
+        return alert("Please enter a valid IFSC code (e.g., SBIN0001234)");
+      }
+    }
+
+    if (hasUpiId && !/^[\w\.-]+@[\w]+$/i.test(upiId.trim())) {
+      return alert(
+        "Please enter a valid UPI ID (e.g., user@paytm, 9876543210@ybl)"
+      );
+    }
+
+    setStep(2);
+  };
+
+  const handleClaim = async (bet) => {
+    if (loading) return;
+
+    // Find all unclaimed winning bets
+    const unclaimedWinningBets = betDetails.filter(
+      (b) => b.status === "won" && (b.claimed || "unclaimed") === "unclaimed"
+    );
+
+    if (unclaimedWinningBets.length === 0) {
+      return alert("❌ No unclaimed winning bets found!");
+    }
+
+    // Calculate total win amount for all unclaimed bets
+    const totalWinAmount = unclaimedWinningBets.reduce((sum, b) => {
+      const bonus = b.bonus ? parseFloat(b.bonus) : 1;
+      return sum + parseFloat(b.stake) * 2 * 80 * bonus;
+    }, 0);
+
+    const hasBankDetails =
+      bankName.trim() && accountNumber.trim() && ifsc.trim();
+    const hasUpiId = upiId.trim();
+
+    if (!hasBankDetails && !hasUpiId) {
+      return alert("Please provide either bank details OR UPI ID");
+    }
+
+    if (hasBankDetails) {
+      if (!/^\d{6,18}$/.test(accountNumber.trim())) {
+        return alert("Please enter a valid account number (6-18 digits)");
+      }
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifsc.trim())) {
+        return alert("Please enter a valid IFSC code");
+      }
+    }
+
+    if (hasUpiId && !/^[\w\.-]+@[\w]+$/i.test(upiId.trim())) {
+      return alert("Please enter a valid UPI ID");
+    }
+
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
       const user = jwtDecode(token);
 
-      // Submit withdrawal request
+      // Build payload with only provided fields
+      const payload = {
+        userId: user.id || user.userId,
+        amount: totalWinAmount,
+      };
+
+      if (hasBankDetails) {
+        payload.bankName = bankName.trim();
+        payload.accountNumber = accountNumber.trim();
+        payload.ifscCode = ifsc.trim().toUpperCase();
+      }
+
+      if (hasUpiId) {
+        payload.upiId = upiId.trim();
+      }
+
+      // Submit withdrawal request using existing API
       await axios.post(
         `${BACKEND_URL}/api/wallet/withdrawal/request`,
-        {
-          userId: user.id,
-          amount: winAmount,
-          bankName: trimmedBankName,
-          accountNumber: trimmedAccountNumber,
-          ifscCode: trimmedIfsc,
-        },
+        payload,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      // Update bet claimed status
-      await axios.post(
-        `${BACKEND_URL}/api/bets/claim-status`,
-        {
-          betId: bet.id,
-          status: "claimed",
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      // Update all unclaimed winning bets' claimed status
+      for (const unclaimedBet of unclaimedWinningBets) {
+        await axios.post(
+          `${BACKEND_URL}/api/bets/claim-status`,
+          {
+            betId: unclaimedBet.id,
+            status: "claimed",
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      }
 
       alert(
-        `✅ Claim request submitted successfully for ₹${winAmount.toFixed(
+        `✅ Claim request submitted successfully for ₹${totalWinAmount.toFixed(
           2
         )}! Admin will process the payout manually.`
       );
@@ -131,6 +194,8 @@ const BetDetailsModal = ({
       alert(
         err.response?.data?.message || "❌ Error while submitting claim request"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -218,7 +283,6 @@ const BetDetailsModal = ({
                   <th className="border p-2">Status</th>
                   <th className="border p-2">Win Amount</th>
                   <th className="border p-2">Claimed</th>
-                  <th className="border p-2">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,17 +333,6 @@ const BetDetailsModal = ({
                           </span>
                         )}
                       </td>
-                      <td className="border p-2 text-center">
-                        {b.status === "won" &&
-                          (b.claimed || "unclaimed") === "unclaimed" && (
-                            <button
-                              onClick={() => setStep(2)}
-                              className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
-                            >
-                              🏆 Claim
-                            </button>
-                          )}
-                      </td>
                     </tr>
                   );
                 })}
@@ -292,7 +345,6 @@ const BetDetailsModal = ({
         {step === 2 && (
           <div className="border-t pt-4">
             <h3 className="font-bold text-green-600 mb-3">🏆 Claim Winnings</h3>
-
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
                 💰 <strong>Total Win Amount:</strong> ₹
@@ -310,66 +362,115 @@ const BetDetailsModal = ({
               </p>
             </div>
 
-            <div className="mb-3 relative">
-              <input
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
-                placeholder="Bank Name"
-                value={bankName}
-                onChange={handleBankChange}
-              />
-              {suggestions.length > 0 && (
-                <ul className="absolute bg-white border rounded-lg w-full mt-1 max-h-40 overflow-auto z-20">
-                  {suggestions.map((b) => (
-                    <li
-                      key={b}
-                      className="px-3 py-1 hover:bg-green-100 cursor-pointer"
-                      onClick={() => chooseBank(b)}
-                    >
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 font-semibold mb-2">
+                Payment Options:
+              </p>
+              <p className="text-xs text-blue-700">
+                Provide bank details, UPI ID, or both for flexible payout
+                options.
+              </p>
             </div>
 
-            <input
-              className="w-full px-4 py-2 mb-3 border rounded-lg"
-              placeholder="Account Number"
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-            />
-            <input
-              className="w-full px-4 py-2 mb-4 border rounded-lg"
-              placeholder="IFSC Code"
-              value={ifsc}
-              onChange={(e) => setIfsc(e.target.value.toUpperCase())}
-            />
+            {/* Bank Details Section */}
+            <div className="mb-3 p-3 border border-gray-200 rounded-lg">
+              <h4 className="font-semibold text-gray-700 mb-2 text-sm">
+                🏦 Bank Details (Optional)
+              </h4>
+
+              <div className="mb-2 relative">
+                <input
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                  placeholder="Bank Name (optional)"
+                  value={bankName}
+                  onChange={handleBankChange}
+                />
+                {suggestions.length > 0 && (
+                  <ul className="absolute bg-white border rounded-lg w-full mt-1 max-h-40 overflow-auto z-20">
+                    {suggestions.map((b) => (
+                      <li
+                        key={b}
+                        className="px-3 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                        onClick={() => chooseBank(b)}
+                      >
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <input
+                className="w-full px-3 py-2 mb-2 border rounded-lg text-sm"
+                placeholder="Account Number (optional)"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+              />
+
+              <input
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+                placeholder="IFSC Code (optional)"
+                value={ifsc}
+                onChange={(e) => setIfsc(e.target.value.toUpperCase())}
+              />
+            </div>
+
+            {/* UPI Section */}
+            <div className="mb-4 p-3 border border-gray-200 rounded-lg">
+              <h4 className="font-semibold text-gray-700 mb-2 text-sm">
+                📱 UPI Details (Optional)
+              </h4>
+              <input
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+                placeholder="UPI ID (e.g., user@paytm) - optional"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+              />
+            </div>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg"
+                disabled={loading}
+                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg disabled:opacity-50"
               >
                 ⬅ Back to Details
               </button>
               <button
                 onClick={() => handleClaim(bet)}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                disabled={loading}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50 flex items-center justify-center"
               >
-                🚀 Submit Claim
+                {loading ? (
+                  <span>Processing...</span>
+                ) : (
+                  <span>🚀 Submit Claim</span>
+                )}
               </button>
             </div>
           </div>
         )}
 
         {step === 1 && (
-          <div className="flex justify-end">
+          <div className="flex justify-between">
             <button
               onClick={onClose}
               className="bg-gray-500 text-white px-6 py-2 rounded-lg"
             >
               Close
             </button>
+            {/* Show claim button only if there are unclaimed winning bets */}
+            {betDetails.some(
+              (b) =>
+                b.status === "won" && (b.claimed || "unclaimed") === "unclaimed"
+            ) && (
+              <button
+                onClick={() => setStep(2)}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+              >
+                🏆 Claim Winnings
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -382,10 +483,7 @@ const ShufflingNumber = ({ preview, isFinal }) => {
   const [showFinalResult, setShowFinalResult] = React.useState(false);
 
   useEffect(() => {
-    // console.log("🎰 ShufflingNumber: isFinal =", isFinal, "preview =", preview);
-
     if (!isFinal) {
-      // Reset final result state when not final
       setShowFinalResult(false);
 
       const interval = setInterval(() => {
@@ -394,15 +492,11 @@ const ShufflingNumber = ({ preview, isFinal }) => {
       }, 80);
 
       return () => {
-        // console.log("🛑 Clearing shuffling interval");
         clearInterval(interval);
       };
     } else {
-      //   console.log("✅ Displaying final number:", preview);
-      // Set final result immediately
       setDisplay(preview?.toString().padStart(2, "0") || "--");
 
-      // Show final result state after a brief delay for dramatic effect
       setTimeout(() => {
         setShowFinalResult(true);
       }, 200);
@@ -546,17 +640,14 @@ const JackpotGame = () => {
     if (barcodeInput.length === 7 && /^[5]\d{6}$/.test(barcodeInput)) {
       const fetchBetDetails = async () => {
         try {
-          //   console.log("🔍 Fetching bet details for barcode:", barcodeInput);
           const { data } = await axios.get(
             `${BACKEND_URL}/api/bets/by-barcode/${barcodeInput}`
           );
 
           if (data && data.length > 0) {
-            // console.log("✅ Found bet details:", data);
             setBetDetailsData(data);
             setBetDetailsModal(true);
           } else {
-            // console.log("❌ No bets found for barcode:", barcodeInput);
             setBetDetailsData([]);
             setBetDetailsModal(true);
           }
@@ -617,7 +708,6 @@ const JackpotGame = () => {
 
   // Clear function for manual clearing
   const clearNumber = () => {
-    // console.log("🧹 Manual clearing all betting fields...");
     setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
     setEValues(Array(10).fill(""));
     setRowValues(Array(10).fill(""));
@@ -629,7 +719,6 @@ const JackpotGame = () => {
 
   // Auto clear function after successful bet placement
   const autoClearAfterBet = () => {
-    // console.log("🔄 Auto-clearing after successful bet placement...");
     setGridValues(Array.from({ length: 10 }, () => Array(10).fill("")));
     setEValues(Array(10).fill(""));
     setRowValues(Array(10).fill(""));
@@ -681,43 +770,25 @@ const JackpotGame = () => {
       query: { userId: user?.id || "" },
     });
 
-    // socketRef.current.on("connect", () =>
-    //   console.log("🟢 Connected to socket.io server")
-    // );
-
     socketRef.current.on("timer-update", (sec) => setTimeLeft(sec));
 
     socketRef.current.on(
       "final-popup",
       ({ countdown, preview, isResult, bonus }) => {
-        // console.log("📩 final-popup received:", {
-        //   countdown,
-        //   preview,
-        //   isResult,
-        //   bonus,
-        // });
-
         if (countdown === null) {
-          //   console.log("🔄 New round starting - resetting popup");
           setFinalPopupCountdown(null);
           setFinalPopupPreview(null);
           setBetNumbers(new Set());
           localStorage.removeItem("placedNumbers");
         } else if (isResult && countdown === 0) {
-          //   console.log("🛑 Final result received, stopping shuffle");
           setFinalPopupCountdown(0);
           setFinalPopupPreview(preview);
 
-          // ✅ INCREASED TIMEOUT - Show result for 6 seconds instead of 4
           setTimeout(() => {
-            // console.log(
-            //   "⏰ Auto-closing final result popup after showing result"
-            // );
             setFinalPopupCountdown(null);
             setFinalPopupPreview(null);
-          }, 6000); // Changed from 4000 to 6000ms
+          }, 6000);
         } else if (countdown > 0) {
-          //   console.log("⏳ Countdown in progress:", countdown);
           setFinalPopupCountdown(countdown);
           setFinalPopupPreview(preview);
         }
@@ -725,7 +796,6 @@ const JackpotGame = () => {
     );
 
     return () => {
-      //   console.log("🔌 Disconnecting socket");
       socketRef.current.disconnect();
     };
   }, [user]);
@@ -870,31 +940,6 @@ const JackpotGame = () => {
       <JackpotHeader onTimerUpdate={setTimeLeft} />
 
       <JackpotButton gridValues={gridValues} onClear={clearNumber} />
-
-      {/* Quick Info Bar with Barcode Input */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 text-sm flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <span>🎯 Win Rate: 1:80</span>
-          <span>⏰ Draws every 5 mins</span>
-          <span>💰 Min bet: ₹2</span>
-        </div>
-      </div>
-
-      {/* Win Calculation Guide - Always Visible */}
-      <div className="mx-2 mt-2 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-green-800 text-sm mb-1">
-              📊 Win Formula:{" "}
-              <span className="text-blue-600">Stake × 2 × 80 × Bonus</span>
-            </h3>
-            <p className="text-xs text-green-700">
-              Example: ₹5 bet with 3x bonus = ₹5 × 2 × 80 × 3 ={" "}
-              <span className="font-bold text-green-600">₹2,400</span>
-            </p>
-          </div>
-        </div>
-      </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="flex flex-col md:flex-row">
@@ -1219,7 +1264,6 @@ const JackpotGame = () => {
 
                       <button
                         onClick={() => {
-                          //   console.log("👆 Manual close of final popup");
                           setFinalPopupCountdown(null);
                           setFinalPopupPreview(null);
                         }}

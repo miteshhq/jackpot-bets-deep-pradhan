@@ -1,4 +1,4 @@
-// 📁 config/db.js (Updated with claimed column and bonus column support)
+// config/db.js (Updated with claimed column and bonus column support)
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -17,7 +17,6 @@ const createDatabase = async () => {
         const databaseName = process.env.DB_NAME || 'jackpot';
         await connection.execute(`CREATE DATABASE IF NOT EXISTS \`${databaseName}\``);
         console.log(`✅ Database '${databaseName}' ready`);
-
     } catch (error) {
         console.error('❌ Database creation failed:', error);
         throw error;
@@ -41,12 +40,12 @@ const pool = mysql.createPool({
     queueLimit: 0,
 });
 
-// ✅ Create all required tables (Updated with claimed and bonus columns)
+// Create all required tables (Updated with claimed and bonus columns)
 export const createTables = async () => {
     try {
         console.log('🔄 Creating tables for manual wallet system...');
 
-        // 1. Users table (authController.js)
+        // 1. Users table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -80,7 +79,7 @@ export const createTables = async () => {
             )
         `);
 
-        // ✅ Check and add bonus column to bets table if it doesn't exist
+        // Check and add bonus column to bets table if it doesn't exist
         try {
             const [bonusColumns] = await pool.execute(`
                 SELECT COLUMN_NAME 
@@ -99,7 +98,7 @@ export const createTables = async () => {
             console.log('ℹ️ Bonus column might already exist or error adding it:', bonusError.message);
         }
 
-        // ✅ Check and add claimed column to bets table if it doesn't exist
+        // Check and add claimed column to bets table if it doesn't exist
         try {
             const [claimedColumns] = await pool.execute(`
                 SELECT COLUMN_NAME 
@@ -118,7 +117,7 @@ export const createTables = async () => {
             console.log('ℹ️ Claimed column might already exist or error adding it:', claimedError.message);
         }
 
-        // 3. Results table (resultController.js)
+        // 3. Results table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS results (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -131,7 +130,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 4. Withdrawals table (legacy - kept for backward compatibility)
+        // 4. Withdrawals table (legacy)
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS withdrawals (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -148,7 +147,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 5. Transactions table - Check if 'type' column exists before adding
+        // 5. Transactions table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -179,14 +178,12 @@ export const createTables = async () => {
             `, [process.env.DB_NAME || 'jackpot']);
 
             if (columns.length === 0) {
-                // Column doesn't exist, add it with all enum values
                 await pool.execute(`
                     ALTER TABLE transactions 
                     ADD COLUMN type ENUM('deposit', 'withdrawal', 'game', 'manual_credit', 'manual_debit') DEFAULT 'game'
                 `);
                 console.log('✅ Added type column to transactions table with all enum values');
             } else {
-                // Column exists, update enum to include new values
                 try {
                     await pool.execute(`
                         ALTER TABLE transactions 
@@ -201,7 +198,7 @@ export const createTables = async () => {
             console.log('ℹ️ Type column handling completed with warnings');
         }
 
-        // 6. NEW: Deposit Requests table (for manual deposit system)
+        // 6. Deposit Requests table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS deposit_requests (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -218,15 +215,16 @@ export const createTables = async () => {
             )
         `);
 
-        // 7. NEW: Withdrawal Requests table (for manual withdrawal system)
+        // 7. Withdrawal Requests table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS withdrawal_requests (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT NOT NULL,
                 amount DECIMAL(10,2) NOT NULL,
-                bank_name VARCHAR(255) NOT NULL,
-                bank_account_number VARCHAR(20) NOT NULL,
-                ifsc_code VARCHAR(11) NOT NULL,
+                bank_name VARCHAR(255),
+                bank_account_number VARCHAR(20),
+                ifsc_code VARCHAR(11),
+                upi_id VARCHAR(100),
                 phone_number VARCHAR(15),
                 status ENUM('pending', 'completed', 'rejected') DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -238,7 +236,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 8. Referrals table (referralController.js)
+        // 8. Referrals table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS referrals (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -251,7 +249,7 @@ export const createTables = async () => {
             )
         `);
 
-        // 9. Referral Rewards table (authController.js)
+        // 9. Referral Rewards table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS referral_rewards (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -262,13 +260,13 @@ export const createTables = async () => {
                 FOREIGN KEY (referrer_id) REFERENCES users(id),
                 FOREIGN KEY (referred_user_id) REFERENCES users(id),
                 INDEX idx_referrer_id (referrer_id),
-                INDEX idx_referred_user_id (referred_user_id)
+                INDEX idx_referenced_user_id (referred_user_id)
             )
         `);
 
         console.log('✅ All tables created successfully!');
 
-        // ✅ Log table creation summary
+        // Log table creation summary
         console.log('📊 Created/Updated tables:');
         console.log('   - users (authentication)');
         console.log('   - bets (betting system with bonus and claimed columns)');
@@ -280,24 +278,13 @@ export const createTables = async () => {
         console.log('   - referrals (referral codes)');
         console.log('   - referral_rewards (referral bonuses)');
 
-        // ✅ Verify the bets table structure
-        try {
-            const [betsStructure] = await pool.execute(`DESCRIBE bets`);
-            console.log('📋 Bets table structure:');
-            betsStructure.forEach(column => {
-                console.log(`   - ${column.Field}: ${column.Type} ${column.Default ? `(default: ${column.Default})` : ''}`);
-            });
-        } catch (describeError) {
-            console.log('ℹ️ Could not describe bets table structure');
-        }
-
     } catch (error) {
         console.error('❌ Error creating tables:', error);
         throw error;
     }
 };
 
-// ✅ Only call createTables here, not in server.js
+// Only call createTables here, not in server.js
 await createTables();
 
 export default pool;

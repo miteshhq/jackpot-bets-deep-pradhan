@@ -100,12 +100,36 @@ export const rejectDepositRequest = async (req, res) => {
     }
 };
 
-// ✅ Create withdrawal request (user side)
 export const createWithdrawalRequest = async (req, res) => {
-    const { userId, amount, bankName, accountNumber, ifscCode } = req.body;
+    const { userId, amount, bankName, accountNumber, ifscCode, upiId } = req.body;
 
-    if (!userId || !amount || amount < 1 || !bankName || !accountNumber || !ifscCode) {
-        return res.status(400).json({ message: 'All fields are required' });
+    // Validate that at least one payment method is provided
+    const hasBankDetails = bankName && accountNumber && ifscCode;
+    const hasUpiId = upiId && upiId.trim();
+
+    if (!userId || !amount || amount < 1) {
+        return res.status(400).json({ message: 'Valid user ID and amount required' });
+    }
+
+    if (!hasBankDetails && !hasUpiId) {
+        return res.status(400).json({
+            message: 'Either complete bank details (Bank Name, Account Number, IFSC) OR UPI ID is required'
+        });
+    }
+
+    // Validate bank details if provided
+    if (hasBankDetails) {
+        if (!/^\d{6,18}$/.test(accountNumber.toString())) {
+            return res.status(400).json({ message: 'Invalid account number format' });
+        }
+        if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifscCode)) {
+            return res.status(400).json({ message: 'Invalid IFSC code format' });
+        }
+    }
+
+    // ✅ FIXED: More flexible UPI validation
+    if (hasUpiId && !/^[\w\.-]+@[\w]+$/i.test(upiId.trim())) {
+        return res.status(400).json({ message: 'Invalid UPI ID format' });
     }
 
     try {
@@ -119,11 +143,20 @@ export const createWithdrawalRequest = async (req, res) => {
             return res.status(400).json({ message: 'Insufficient balance' });
         }
 
-        // Create withdrawal request
+        // ✅ FIXED: Create withdrawal request with proper null handling
         await db.query(
-            `INSERT INTO withdrawal_requests (user_id, amount, bank_name, bank_account_number, ifsc_code, phone_number, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-            [userId, amount, bankName, accountNumber, ifscCode, userRows[0].phone]
+            `INSERT INTO withdrawal_requests 
+      (user_id, amount, bank_name, bank_account_number, ifsc_code, upi_id, phone_number, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+            [
+                userId,
+                amount,
+                bankName || null,
+                accountNumber || null,
+                ifscCode ? ifscCode.toUpperCase() : null,
+                upiId ? upiId.trim() : null,
+                userRows[0].phone
+            ]
         );
 
         res.json({ message: 'Withdrawal request submitted successfully' });

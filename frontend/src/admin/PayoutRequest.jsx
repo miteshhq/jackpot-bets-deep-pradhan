@@ -81,6 +81,7 @@ const PayOutRequest = () => {
             <th className="border p-2">Bank Name</th>
             <th className="border p-2">Account Number</th>
             <th className="border p-2">IFSC Code</th>
+            <th className="border p-2">UPI ID</th>
             <th className="border p-2">Amount (💎)</th>
             <th className="border p-2">Status</th>
             <th className="border p-2">Date</th>
@@ -105,6 +106,19 @@ const PayOutRequest = () => {
               <td className="border p-2">{req.bank_name}</td>
               <td className="border p-2">{req.bank_account_number}</td>
               <td className="border p-2">{req.ifsc_code}</td>
+              {/* In the table row for UPI ID column, update to show both: */}
+              {/* ✅ FIXED: Better UPI ID display */}
+              <td className="border p-2">
+                {req.upi_id ? (
+                  <div className="text-xs">
+                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                      UPI: {req.upi_id}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-gray-400">No UPI</span>
+                )}
+              </td>
               <td className="border p-2">💎{req.amount}</td>
               <td className="border p-2">
                 <span
