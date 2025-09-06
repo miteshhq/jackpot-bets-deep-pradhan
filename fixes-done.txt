@@ -19,7 +19,7 @@
 - give guide to user how to play
 - enering barcode will search for user and bet info and won price - and user can claim the amount and that amount will get deducted from his balance. - in bet details
 
-- hold result for 2 seconds
+- hold result for 2 seconds - done
 - barcode claim in home page - done
 - put how to play in the marqee - done
 - time and jackpot bigger sizess - done

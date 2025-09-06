@@ -279,7 +279,7 @@ const finalizeResult = async () => {
                 preview: null,
                 isResult: true,
             });
-        }, 7000);
+        }, 3000);
 
         const resultPayload = {
             time: roundTime,
