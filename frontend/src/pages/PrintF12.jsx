@@ -2,82 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-// Print styles for small ticket printing
-const printStyles = `
-  @media print {
-    @page {
-      size: 80mm auto;
-      margin: 0;
-    }
-    
-    * {
-      -webkit-print-color-adjust: exact !important;
-      color-adjust: exact !important;
-    }
-    
-    body {
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 80mm;
-      font-family: monospace;
-    }
-    
-    .receipt-wrapper {
-      width: 80mm !important;
-      margin: 0 !important;
-      padding: 4px !important;
-      font-size: 9px !important;
-      line-height: 1.1 !important;
-      background: white !important;
-    }
-    
-    .no-print,
-    .print\\:hidden {
-      display: none !important;
-    }
-    
-    .print\\:mt-0 { margin-top: 0 !important; }
-    .print\\:p-0 { padding: 0 !important; }
-    .print\\:m-0 { margin: 0 !important; }
-    .print\\:shadow-none { box-shadow: none !important; }
-    .print\\:rounded-none { border-radius: 0 !important; }
-    
-    .receipt-title {
-      font-size: 10px !important;
-      font-weight: bold !important;
-      text-align: center !important;
-      margin-bottom: 2px !important;
-      padding-bottom: 1px !important;
-    }
-    
-    .receipt-info {
-      font-size: 8px !important;
-      margin: 1px 0 !important;
-    }
-    
-    .receipt-bets {
-      font-size: 8px !important;
-      margin: 1px 0 !important;
-    }
-    
-    .receipt-total {
-      font-size: 8px !important;
-      margin: 1px 0 !important;
-    }
-    
-    .receipt-footer {
-      font-size: 7px !important;
-      text-align: center !important;
-      margin-top: 2px !important;
-    }
-    
-    .bet-separator {
-      margin: 1px 0 !important;
-      border-top: 1px dotted black !important;
-    }
-  }
-`;
-
 // Receipt Component
 const Receipt = ({ receiptData }) => {
   // Group into rows of 5 bets each
@@ -87,42 +11,37 @@ const Receipt = ({ receiptData }) => {
   }
 
   return (
-    <div className="text-[10px] font-mono w-[80mm] bg-white receipt-wrapper p-2">
-      <div className="receipt-title text-center font-bold border-b border-black pb-1 mb-1">
+    <div className="text-[12px] font-mono w-[80mm] bg-white receipt-wrapper p-2">
+      <div className="text-center font-bold border-b border-black pb-1 mb-1">
         --- JACKPOT BETTING SLIP ---
       </div>
-      <div className="receipt-info">Counter ID : {receiptData.counterID}</div>
-      <div className="receipt-info">Barcode : {receiptData.barcode}</div>
-      <div className="receipt-info">Agent ID : {receiptData.agentID}</div>
-      <div className="receipt-info text-[9px]">
+      <div>Counter ID : {receiptData.counterID}</div>
+      <div>Barcode : {receiptData.barcode}</div>
+      <div>Agent ID : {receiptData.agentID}</div>
+      <div>
         2 DIGIT 2 Draw {receiptData.drawDate} {receiptData.drawTime}
       </div>
 
-      <div className="bet-separator my-1 border-t border-dotted border-black" />
+      <div className="my-1 border-t border-dotted border-black" />
 
       {grouped.map((group, rowIdx) => (
-        <div
-          key={rowIdx}
-          className="receipt-bets flex flex-wrap gap-x-1 text-[9px]"
-        >
+        <div key={rowIdx} className="flex flex-wrap gap-x-2">
           {group.map((bet, i) => (
-            <span key={i} className="whitespace-nowrap">
-              {bet.number.toString().padStart(2, "0")}-
+            <span key={i}>
+              {bet.number.toString().padStart(2, "0")} -{" "}
               {bet.points.toString().padStart(2, "0")}
-              {i !== group.length - 1 ? "," : ""}
+              {i !== group.length - 1 ? " ," : ""}
             </span>
           ))}
         </div>
       ))}
 
-      <div className="bet-separator my-1 border-t border-dotted border-black" />
-      <div className="receipt-total text-[9px]">
+      <div className="my-1 border-t border-dotted border-black" />
+      <div>
         Qty : {receiptData.qty} Total Pts :{" "}
         {(receiptData.totalPts * 2).toFixed(2)}
       </div>
-      <div className="receipt-footer text-center mt-2 text-[8px]">
-        *** GOOD LUCK ***
-      </div>
+      <div className="text-center mt-2 text-[10px]">*** GOOD LUCK ***</div>
     </div>
   );
 };
@@ -136,20 +55,6 @@ const PrintF12 = () => {
 
   const [receiptData, setReceiptData] = useState(null);
   const [hasTriggeredPrint, setHasTriggeredPrint] = useState(false);
-
-  // Add print styles when component mounts
-  useEffect(() => {
-    const styleElement = document.createElement("style");
-    styleElement.innerHTML = printStyles;
-    document.head.appendChild(styleElement);
-
-    return () => {
-      // Cleanup: remove the style when component unmounts
-      if (document.head.contains(styleElement)) {
-        document.head.removeChild(styleElement);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (selectedBets.length === 0) {
@@ -217,10 +122,7 @@ const PrintF12 = () => {
   };
 
   const handlePrint = () => {
-    // Small delay to ensure styles are applied
-    setTimeout(() => {
-      window.print();
-    }, 100);
+    window.print();
   };
 
   if (!receiptData) {
